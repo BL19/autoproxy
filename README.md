@@ -18,4 +18,10 @@ adresses:
     url: "http://google.com"
     suburl: "/google"
     hardReplace: true
+    replaceinheaders: true
+filetypestoignore:
+    - ttf
+    - woff
+    - ico
+    - woff2
 ```
