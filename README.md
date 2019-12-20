@@ -5,6 +5,7 @@ A http proxy that proxies to different websites depending on suburl of the reque
 
 ## Config
 The config is a YAML config that is located in 'config.yml' in the same directory as the runnable.
+Example:
 ```yaml
 port: 8101
 adresses:
@@ -16,4 +17,5 @@ adresses:
     enabled: true
     url: "http://google.com"
     suburl: "/google"
+    hardReplace: true
 ```
