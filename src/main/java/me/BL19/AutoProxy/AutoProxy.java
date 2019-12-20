@@ -1,7 +1,7 @@
 package me.BL19.AutoProxy;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +31,21 @@ public class AutoProxy {
 	
 	private static void loadConfig() throws IOException {
 		Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
-		FileReader r = new FileReader("config.yml");
+		File file = new File("config.yml");
+		FileInputStream fis = new FileInputStream(file);
+		byte[] data = new byte[(int) file.length()];
+		fis.read(data);
+		fis.close();
+
+		String r = new String(data, "UTF-8");
+		
+		// Try to eliminate user errors
+		r = r.toLowerCase();
+		r = r.replace("hardreplace", "hardReplace");
+		r = r.replace("replaceinheaders", "replaceInHeaders");
+		r = r.replace("filetypestoignore", "fileTypesToIgnore");
+		
 		conf = yml.load(r);
-		r.close();
 		for (ProxyAddress proxyAddress : conf.adresses.values()) {
 			if(proxyAddress.enabled)
 				proxiedAddresses.add(proxyAddress);
