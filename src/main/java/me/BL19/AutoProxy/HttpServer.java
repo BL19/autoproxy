@@ -1,5 +1,6 @@
 package me.BL19.AutoProxy;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -7,8 +8,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.entity.GZIPInputStreamFactory;
 
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
@@ -132,12 +135,14 @@ public class HttpServer extends NanoHTTPD {
 				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
+			
 			if (con.getResponseCode() == 404)
 				return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found");
 			StringWriter writer = new StringWriter();
-
+			
+			InputStream is = null;
 			try {
-				InputStream is = con.getInputStream();
+				is = con.getInputStream();
 				String enc = con.getContentEncoding();
 //				System.out.println(enc);
 				if (enc == null || !enc.startsWith("gzip")) {
@@ -148,7 +153,6 @@ public class HttpServer extends NanoHTTPD {
 //					IOUtils.copy(is, writer, (enc == null || enc.equals("gzip") ? "UTF-8" : enc));
 					writer.append(GZIPCompression.decompress(IOUtils.toByteArray(is)));
 				}
-				is.close();
 			} catch (IOException ex) {
 				return newFixedLengthResponse(Status.lookup(con.getResponseCode()), "text",
 						"Error! Server returned " + con.getResponseCode() + " ("
@@ -253,6 +257,26 @@ public class HttpServer extends NanoHTTPD {
 				}
 			}
 			System.out.println("Done!");
+			String content = con.getHeaderField("Content-Type");
+			if(is != null && content.startsWith("image")) {
+				InputStream str = is;
+				String enc = con.getContentEncoding();
+				long len = con.getContentLengthLong();
+				if (enc != null && enc.startsWith("gzip")) {
+					byte[] b1 = IOUtils.toByteArray(is);
+					byte[] b2 = GZIPCompression.decompress(b1).getBytes();
+					str = new ByteArrayInputStream(b2);
+					len = b2.length;
+				} else {
+					byte[] b1 = IOUtils.toByteArray(is);
+					str = new ByteArrayInputStream(b1);
+					len = b1.length;
+				}
+				Response imgRes = newFixedLengthResponse(Status.lookup(con.getResponseCode()), content, str, len);
+				imgRes.setRequestMethod(session.getMethod());
+				imgRes.setGzipEncoding(true);
+				return imgRes;
+			}
 			return res;
 
 		} catch (Exception e) {
