@@ -51,4 +51,36 @@
 
 
 	</dependencies>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<version>2.4.1</version>
+				<executions>
+					<execution>
+						<id>make-executable-jar-with-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<archive>
+								<manifest>
+									<addClasspath>true</addClasspath>
+									<mainClass>me.BL19.AutoProxy.AutoProxy</mainClass>
+								</manifest>
+							</archive>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+							<!-- <encoding>UTF-8</encoding> Default value is: ${project.build.sourceEncoding}. 
+								(https://maven.apache.org/plugins/maven-assembly-plugin/single-mojo.html) -->
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>
