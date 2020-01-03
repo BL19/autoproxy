@@ -13,6 +13,8 @@ import java.util.zip.GZIPInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.entity.GZIPInputStreamFactory;
 
+import com.google.gson.Gson;
+
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import me.BL19.API.Log.Logger;
@@ -70,9 +72,7 @@ public class HttpServer extends NanoHTTPD {
 			if (ref != null) {
 
 				String host = getHost(ref);
-				System.out.println(host);
 				String regx = "(https|http):(\\/\\/)(((www?)(\\.?))?)(" + host.replace(".", "\\.") + ")";
-				System.out.println(regx);
 				ref = ref.replaceAll(regx, "");
 
 				System.out.println("[ADVREF] Trying " + ref);
@@ -97,8 +97,8 @@ public class HttpServer extends NanoHTTPD {
 					runActions = false;
 			}
 			String address = uri.replace(addr.suburl, addr.url);
-			System.out.println(uri + " -> " + address);
-			URL url = new URL(address);
+//			System.out.println(uri + " -> " + address);
+			URL url = new URL(address + (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
 			con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod(session.getMethod().name());
 
@@ -117,9 +117,6 @@ public class HttpServer extends NanoHTTPD {
 					if (addr.replaceInHeaders && runActions)
 						field = field.replaceAll(regx, replacement);
 
-					if (runActions)
-						System.out.println(key + ": " + field);
-
 					con.setRequestProperty(key, field);
 //				System.out.println(key + ": " + session.getHeaders().get(key));
 				}
@@ -131,6 +128,8 @@ public class HttpServer extends NanoHTTPD {
 			int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
 
+			
+			
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
@@ -146,10 +145,10 @@ public class HttpServer extends NanoHTTPD {
 				String enc = con.getContentEncoding();
 //				System.out.println(enc);
 				if (enc == null || !enc.startsWith("gzip")) {
-					System.out.println("Encoding: " + enc + " (using none)");
+//					System.out.println("Encoding: " + enc + " (using none)");
 					IOUtils.copy(is, writer);
 				} else if (enc.startsWith("gzip")) {
-					System.out.println("Encoding: GZIP");
+//					System.out.println("Encoding: GZIP");
 //					IOUtils.copy(is, writer, (enc == null || enc.equals("gzip") ? "UTF-8" : enc));
 					writer.append(GZIPCompression.decompress(IOUtils.toByteArray(is)));
 				}
@@ -163,11 +162,10 @@ public class HttpServer extends NanoHTTPD {
 			String theString = writer.toString();
 
 			if (runActions) {
-				System.out.println("HTML: " + containsHTML(theString));
+//				System.out.println("HTML: " + containsHTML(theString));
 				if (containsHTML(theString)) {
 					if (theString.contains("<base")) {
 						// Has base tag needs removal
-						System.out.println("Has basetag");
 						int b = theString.indexOf("<base");
 						String s = theString.substring(b);
 						s = s.substring(0, s.indexOf("/>")); // <base href="*" / <base href="*"><base
@@ -176,7 +174,6 @@ public class HttpServer extends NanoHTTPD {
 						s = s.replace("\"", "");
 						s = s.replace("href=", "");
 						s = s.trim();
-						System.out.println(s);
 						if (s.startsWith("/")) {
 							s = (addr.suburl.startsWith("/") ? "" : "/") + addr.suburl + s;
 						}
@@ -184,7 +181,7 @@ public class HttpServer extends NanoHTTPD {
 							s = s.substring(0, s.length() - 1);
 						}
 						String base = "<base href=\"" + s + "/\"";
-						System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
+//						System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 						theString = theString.replace(baseTag, base);
 					} else if (theString.toLowerCase().contains("</head>")) { // localhost:8901/google
 						String base = "<base href=\"http://" + session.getHeaders().get("host") + addr.suburl
@@ -201,10 +198,7 @@ public class HttpServer extends NanoHTTPD {
 					// (https|http):(\/\/)(www?)(\.?)(google\.com)
 					String host = getHost(addr.url);
 					String replacement = "http://" + session.getHeaders().get("host") + addr.suburl;
-					System.out.println(host);
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
-					System.out.println(regx);
-					System.out.println(replacement);
 					theString = theString.replaceAll(regx, replacement);
 				}
 			}
@@ -215,18 +209,18 @@ public class HttpServer extends NanoHTTPD {
 //			}
 			int code = con.getResponseCode();
 //			if(code == 302) code = 200;
-			if (runActions && theString.length() < 1000)
-				System.out.println("[" + session.getMethod().name() + "]" + code + " - "
-						+ con.getHeaderField("Content-Type") + ": " + theString);
+//			if (runActions && theString.length() < 1000)
+//				System.out.println("[" + session.getMethod().name() + "]" + code + " - "
+//						+ con.getHeaderField("Content-Type") + ": " + theString);
+//
+//			if (!runActions || theString.length() >= 1000)
+//				System.out.println("[" + session.getMethod().name() + "]" + code + " - "
+//						+ con.getHeaderField("Content-Type") + " [SILENT]");
 
-			if (!runActions || theString.length() >= 1000)
-				System.out.println("[" + session.getMethod().name() + "]" + code + " - "
-						+ con.getHeaderField("Content-Type") + " [SILENT]");
-
-			
-			System.out.println("Debug:");
-			System.out.println("Request Headers: ");
-			System.out.println(getHeaders(requestProperties));
+//			
+//			System.out.println("Debug:");
+//			System.out.println("Request Headers: ");
+//			System.out.println(getHeaders(requestProperties));
 			
 			// Create response
 //			if(session.getHeaders().get("accept-encoding") != null && session.getHeaders().get("accept-encoding").contains("gzip")) {
@@ -250,13 +244,12 @@ public class HttpServer extends NanoHTTPD {
 					if (addr.replaceInHeaders && runActions)
 						field = field.replaceAll(regx, replacement);
 
-					if (runActions)
-						System.out.println(key + ": " + field);
+//					if (runActions)
+//						System.out.println(key + ": " + field);
 
 					res.addHeader(key, field);
 				}
 			}
-			System.out.println("Done!");
 			String content = con.getHeaderField("Content-Type");
 			if(is != null && content.startsWith("image")) {
 				InputStream str = is;
