@@ -87,6 +87,9 @@ public class AutoProxy {
 	}
 
 	static String match(String suburl1, String suburl2) {
+		if(suburl2.equals("/")) {
+			return suburl2;
+		}
 		if(suburl1.equals(suburl2)) return suburl2; // full base remapping
 		suburl1 = (suburl1.startsWith("/") ? suburl1.substring(1) : suburl1);
 		suburl2 = (suburl2.startsWith("/") ? suburl2.substring(1) : suburl2);
