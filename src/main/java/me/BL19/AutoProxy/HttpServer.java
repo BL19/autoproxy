@@ -141,11 +141,9 @@ public class HttpServer extends NanoHTTPD {
 				if (uri.endsWith("." + s))
 					runActions = false;
 			}
-			System.out.println(addr.suburl.length());
 			System.out.println(uri.length());
 			System.out.println(addr.suburl.length());
-			System.out.println(uri.length() - addr.suburl.length() + 1);
-			String address = addr.url + uri.substring(addr.suburl.length(), uri.length() - addr.suburl.length() + 1);
+			String address = addr.url + uri.substring(0, addr.suburl.length());
 			System.out.println(address);
 //			System.out.println(uri + " -> " + address);
 			URL url = new URL(address
