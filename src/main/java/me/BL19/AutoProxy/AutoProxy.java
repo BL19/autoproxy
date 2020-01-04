@@ -62,6 +62,7 @@ public class AutoProxy {
 				p.suburl = "/";
 				p.url = cmd.getOptionValue("default");
 				conf.adresses.put("default", p);
+				l.info("Config not found added '" + p.url + "' as default at '/' (OPT)");
 			} else if(System.getenv("apdefault") != null) {
 			
 				ProxyAddress p = new ProxyAddress();
@@ -69,6 +70,7 @@ public class AutoProxy {
 				p.suburl = "/";
 				p.url = System.getenv("apdefault");
 				conf.adresses.put("default", p);
+				l.info("Config not found added '" + p.url + "' as default at '/' (ENV)");
 				
 			}else{
 				l.error("Failed to load proxies. Need to post new config.");
