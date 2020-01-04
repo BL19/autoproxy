@@ -142,7 +142,7 @@ public class HttpServer extends NanoHTTPD {
 					runActions = false;
 			}
 			String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
-//			System.out.println(uri + " -> " + address);
+			l.debug(uri + " -> " + address);
 			URL url = new URL(address
 					+ (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
 			con = (HttpURLConnection) url.openConnection();
