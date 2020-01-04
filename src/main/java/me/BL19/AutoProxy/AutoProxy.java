@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -53,6 +54,8 @@ public class AutoProxy {
 			loadConfig();
 		} catch (IOException e) {
 			conf = new AutoProxyConfig(); // Null pointer
+			conf.adresses = new HashMap<String, ProxyAddress>();
+			conf.fileTypesToIgnore = new ArrayList<String>();
 			if(cmd.hasOption("default")) {
 				ProxyAddress p = new ProxyAddress();
 				p.enabled = true;
