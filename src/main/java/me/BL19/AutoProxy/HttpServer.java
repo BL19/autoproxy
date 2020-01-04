@@ -66,8 +66,10 @@ public class HttpServer extends NanoHTTPD {
 	public Response serve(IHTTPSession session) {
 		String uri = session.getUri();
 
-		if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null && AutoProxy.conf.allowReplace) {
-			if (!session.getHeaders().containsKey("apkey") || !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
+		if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null
+				&& AutoProxy.conf.allowReplace) {
+			if (!session.getHeaders().containsKey("apkey")
+					|| !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
 				new Thread(new Runnable() {
 					public void run() {
 						try {
@@ -139,7 +141,12 @@ public class HttpServer extends NanoHTTPD {
 				if (uri.endsWith("." + s))
 					runActions = false;
 			}
+			System.out.println(addr.suburl.length());
+			System.out.println(uri.length());
+			System.out.println(addr.suburl.length());
+			System.out.println(uri.length() - addr.suburl.length() + 1);
 			String address = addr.url + uri.substring(addr.suburl.length(), uri.length() - addr.suburl.length() + 1);
+			System.out.println(address);
 //			System.out.println(uri + " -> " + address);
 			URL url = new URL(address
 					+ (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
