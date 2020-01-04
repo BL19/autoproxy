@@ -123,7 +123,7 @@ public class AutoProxy {
 		ProxyAddress s = null;
 		for (ProxyAddress proxyAddress : possibleMatches) {
 			if(proxyAddress.suburl.length() > l) {
-//				System.out.println("new longest " + proxyAddress.suburl);
+				System.out.println("new longest " + proxyAddress.suburl);
 				l = proxyAddress.suburl.length();
 				s = proxyAddress;
 			}

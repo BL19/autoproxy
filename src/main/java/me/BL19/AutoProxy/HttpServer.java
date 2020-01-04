@@ -141,8 +141,9 @@ public class HttpServer extends NanoHTTPD {
 				if (uri.endsWith("." + s))
 					runActions = false;
 			}
+			System.out.println(new Gson().toJson(addr));
 			String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
-			l.debug(uri + " -> " + address);
+			System.out.println(uri + " -> " + address);
 			URL url = new URL(address
 					+ (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
 			con = (HttpURLConnection) url.openConnection();
