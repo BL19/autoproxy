@@ -20,6 +20,7 @@ public class AutoProxy {
 	public static String key = KeyForgery.generateKey();
 
 	public static void main(String[] args) {
+		
 		l.enableMasterModule(new ConsoleModule());
 		l.info("To POST a config to '/config' use the key '" + key + "'");
 		try {
@@ -27,6 +28,11 @@ public class AutoProxy {
 		} catch (IOException e) {
 			l.error("Failed to load proxies. Need to post new config.");
 			e.printStackTrace();
+		}
+		if(args.length > 0) {
+			if(args[0].equalsIgnoreCase("port")) {
+				conf.port = Integer.parseInt(args[1]);
+			}
 		}
 		if(!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
