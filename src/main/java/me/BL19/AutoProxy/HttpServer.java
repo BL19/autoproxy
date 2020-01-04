@@ -1,6 +1,7 @@
 package me.BL19.AutoProxy;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -8,10 +9,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
+import java.util.Scanner;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.entity.GZIPInputStreamFactory;
 
 import com.google.gson.Gson;
 
@@ -21,7 +21,7 @@ import me.BL19.API.Log.Logger;
 
 public class HttpServer extends NanoHTTPD {
 
-	public Logger l = new Logger();
+	public Logger l = new Logger(HttpServer.class);
 
 	public HttpServer() {
 		super(AutoProxy.conf.port);
@@ -65,6 +65,49 @@ public class HttpServer extends NanoHTTPD {
 	@Override
 	public Response serve(IHTTPSession session) {
 		String uri = session.getUri();
+
+		if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null && AutoProxy.conf.allowReplace) {
+			if (!session.getHeaders().containsKey("apkey") || !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
+				new Thread(new Runnable() {
+					public void run() {
+						try {
+							Thread.sleep((long) (Math.random() * 1000 + (int) AutoProxy.key.charAt(2)));
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						AutoProxy.key = KeyForgery.generateKey();
+						l.info("Regenerated key '" + AutoProxy.key + "'");
+					}
+				}).start();
+				return newFixedLengthResponse(Status.UNAUTHORIZED, "text", "Wrong key");
+			}
+
+			// Key is correct
+
+			Scanner sc = new Scanner(session.getInputStream());
+			StringBuffer sb = new StringBuffer();
+			while (sc.hasNext()) {
+				sb.append(sc.nextLine() + "\n");
+			}
+			FileWriter fw;
+			try {
+				fw = new FileWriter("config.yml");
+				fw.write(sb.toString());
+				fw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				return newFixedLengthResponse("Err: " + e.getMessage());
+			}
+			try {
+				AutoProxy.loadConfig();
+			} catch (IOException e) {
+				e.printStackTrace();
+				return newFixedLengthResponse("Err: " + e.getMessage());
+			}
+			l.warning("Config has been replaced! (" + session.getRemoteIpAddress() + ")");
+			return newFixedLengthResponse(sb.toString());
+		}
+
 		ProxyAddress addr = AutoProxy.getTarget(uri);
 		if (addr == null) {
 			String ref = session.getHeaders().get("referer");
@@ -98,7 +141,8 @@ public class HttpServer extends NanoHTTPD {
 			}
 			String address = uri.replace(addr.suburl, addr.url);
 //			System.out.println(uri + " -> " + address);
-			URL url = new URL(address + (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
+			URL url = new URL(address
+					+ (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
 			con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod(session.getMethod().name());
 
@@ -128,17 +172,15 @@ public class HttpServer extends NanoHTTPD {
 			int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
 
-			
-			
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
-			
+
 			if (con.getResponseCode() == 404)
 				return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found");
 			StringWriter writer = new StringWriter();
-			
+
 			InputStream is = null;
 			try {
 				is = con.getInputStream();
@@ -221,7 +263,7 @@ public class HttpServer extends NanoHTTPD {
 //			System.out.println("Debug:");
 //			System.out.println("Request Headers: ");
 //			System.out.println(getHeaders(requestProperties));
-			
+
 			// Create response
 //			if(session.getHeaders().get("accept-encoding") != null && session.getHeaders().get("accept-encoding").contains("gzip")) {
 //				theString = new String(GZIPCompression.compress(theString));
@@ -237,7 +279,8 @@ public class HttpServer extends NanoHTTPD {
 			String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 			for (String k : con.getHeaderFields().keySet()) {
 				if (k != null && !k.equalsIgnoreCase("content-length") && !k.equalsIgnoreCase("content-type")
-						&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding") && !k.equalsIgnoreCase("connection")) {
+						&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding")
+						&& !k.equalsIgnoreCase("connection")) {
 					String key = k;
 					String field = String.join(";", con.getHeaderFields().get(k));
 
@@ -251,7 +294,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 			}
 			String content = con.getHeaderField("Content-Type");
-			if(is != null && content.startsWith("image")) {
+			if (is != null && content.startsWith("image")) {
 				InputStream str = is;
 				String enc = con.getContentEncoding();
 				long len = con.getContentLengthLong();

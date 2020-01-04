@@ -17,19 +17,23 @@ public class AutoProxy {
 	public static List<ProxyAddress> proxiedAddresses = new ArrayList<ProxyAddress>();
 	public static Logger l = new Logger(AutoProxy.class);
 	public static AutoProxyConfig conf;
+	public static String key = KeyForgery.generateKey();
 
 	public static void main(String[] args) {
 		l.enableMasterModule(new ConsoleModule());
+		l.info("To POST a config to '/config' use the key '" + key + "'");
 		try {
 			loadConfig();
 		} catch (IOException e) {
-			l.error("Failed to load proxies");
+			l.error("Failed to load proxies. Need to post new config.");
 			e.printStackTrace();
 		}
+		if(!conf.allowReplace)
+			l.info("Nevermind you can't replace anyway. (Config Disabled)");
 		new HttpServer();
 	}
 
-	private static void loadConfig() throws IOException {
+	public static void loadConfig() throws IOException {
 		Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
 		File file = new File("config.yml");
 		FileInputStream fis = new FileInputStream(file);
@@ -44,8 +48,10 @@ public class AutoProxy {
 		r = r.replace("hardreplace", "hardReplace");
 		r = r.replace("replaceinheaders", "replaceInHeaders");
 		r = r.replace("filetypestoignore", "fileTypesToIgnore");
+		r = r.replace("allowreplace", "allowReplace");
 
 		conf = yml.load(r);
+		proxiedAddresses.clear();
 		for (ProxyAddress proxyAddress : conf.adresses.values()) {
 			if (proxyAddress.enabled)
 				proxiedAddresses.add(proxyAddress);
@@ -74,6 +80,7 @@ public class AutoProxy {
 	}
 
 	static String match(String suburl1, String suburl2) {
+		if(suburl1.equals(suburl2)) return suburl2; // full base remapping
 		suburl1 = (suburl1.startsWith("/") ? suburl1.substring(1) : suburl1);
 		suburl2 = (suburl2.startsWith("/") ? suburl2.substring(1) : suburl2);
 		if(!suburl1.contains(suburl2))
