@@ -6,6 +6,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -20,20 +26,54 @@ public class AutoProxy {
 	public static String key = KeyForgery.generateKey();
 
 	public static void main(String[] args) {
-		
+        Options options = new Options();
+        
+        Option port = new Option("p", "port", true, "The hosting port override");
+        port.setRequired(false);
+        options.addOption(port);
+        
+        Option defaultHost = new Option("d", "default", true, "The default host when a config is not found");
+        defaultHost.setRequired(false);
+        options.addOption(defaultHost);
+        
+        CommandLine cmd = null;
+        
+        try {
+            cmd = new DefaultParser().parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            new HelpFormatter().printHelp("AutoProxy", options);
+
+            System.exit(1);
+        }
+        
 		l.enableMasterModule(new ConsoleModule());
 		l.info("To POST a config to '/config' use the key '" + key + "'");
 		try {
 			loadConfig();
 		} catch (IOException e) {
-			l.error("Failed to load proxies. Need to post new config.");
 			conf = new AutoProxyConfig(); // Null pointer
-			e.printStackTrace();
-		}
-		if(args.length > 0) {
-			if(args[0].equalsIgnoreCase("port")) {
-				conf.port = Integer.parseInt(args[1]);
+			if(cmd.hasOption("default")) {
+				ProxyAddress p = new ProxyAddress();
+				p.enabled = true;
+				p.suburl = "/";
+				p.url = cmd.getOptionValue("default");
+				conf.adresses.put("default", p);
+			} else if(System.getenv("apdefault") != null) {
+			
+				ProxyAddress p = new ProxyAddress();
+				p.enabled = true;
+				p.suburl = "/";
+				p.url = System.getenv("apdefault");
+				conf.adresses.put("default", p);
+				
+			}else{
+				l.error("Failed to load proxies. Need to post new config.");
+				e.printStackTrace();
 			}
+		}
+		if(cmd.hasOption("port")) {
+			conf.port = Integer.parseInt(cmd.getOptionValue("port"));
 		}
 		if(!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
