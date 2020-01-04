@@ -27,6 +27,7 @@ public class AutoProxy {
 			loadConfig();
 		} catch (IOException e) {
 			l.error("Failed to load proxies. Need to post new config.");
+			conf = new AutoProxyConfig(); // Null pointer
 			e.printStackTrace();
 		}
 		if(args.length > 0) {
