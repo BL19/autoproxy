@@ -246,6 +246,15 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					theString = theString.replaceAll(regx, replacement);
 				}
+				
+				if(addr.replaceWithOtherAdresses) {
+					for (ProxyAddress a : AutoProxy.proxiedAddresses) {
+						String host = getHost(a.url);
+						String replacement = "http://" + session.getHeaders().get("host") + a.suburl;
+						String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
+						theString = theString.replaceAll(regx, replacement);
+					}
+				}
 			}
 
 //			System.out.println(theString);

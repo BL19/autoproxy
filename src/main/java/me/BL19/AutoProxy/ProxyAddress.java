@@ -7,5 +7,6 @@ public class ProxyAddress {
 	public boolean enabled = true;
 	public boolean hardReplace = false;
 	public boolean replaceInHeaders = false;
+	public boolean replaceWithOtherAdresses = false;
 	
 }

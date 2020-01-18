@@ -119,6 +119,7 @@ public class AutoProxy {
 		r = r.replace("replaceinheaders", "replaceInHeaders");
 		r = r.replace("filetypestoignore", "fileTypesToIgnore");
 		r = r.replace("allowreplace", "allowReplace");
+		r = r.replace("replacewithotheradresses", "replaceWithOtherAdresses");
 
 		conf = yml.load(r);
 		proxiedAddresses.clear();
