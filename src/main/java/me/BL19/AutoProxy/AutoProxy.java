@@ -96,7 +96,7 @@ public class AutoProxy {
 		}
 		if (cmd.hasOption("port")) {
 			conf.port = Integer.parseInt(cmd.getOptionValue("port"));
-			System.out.println("Set port " + conf.port);
+			l.info("Set port " + conf.port);
 		}
 		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
