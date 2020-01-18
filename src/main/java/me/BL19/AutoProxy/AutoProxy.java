@@ -75,6 +75,7 @@ public class AutoProxy {
 				p.suburl = "/";
 				p.url = cmd.getOptionValue("default");
 				conf.adresses.put("root", p);
+				proxiedAddresses.add(p);
 				conf.port = 80;
 				l.info("Config not found added '" + p.url + "' as default at '/' (OPT)");
 			} else if (System.getenv("apdefault") != null) {
@@ -84,6 +85,7 @@ public class AutoProxy {
 				p.suburl = "/";
 				p.url = System.getenv("apdefault");
 				conf.adresses.put("root", p);
+				proxiedAddresses.add(p);
 				conf.port = 80;
 				l.info("Config not found added '" + p.url + "' as default at '/' (ENV)");
 
@@ -131,7 +133,6 @@ public class AutoProxy {
 //			return null;
 		List<ProxyAddress> possibleMatches = new ArrayList<ProxyAddress>();
 		for (ProxyAddress proxyAddress : proxiedAddresses) {
-			System.out.println(proxyAddress.suburl);
 			if (match(suburl, proxyAddress.suburl) != null) {
 				possibleMatches.add(proxyAddress);
 			}
@@ -140,12 +141,11 @@ public class AutoProxy {
 		ProxyAddress s = null;
 		for (ProxyAddress proxyAddress : possibleMatches) {
 			if (proxyAddress.suburl.length() > l) {
-				System.out.println("new longest " + proxyAddress.suburl);
+//				System.out.println("new longest " + proxyAddress.suburl);
 				l = proxyAddress.suburl.length();
 				s = proxyAddress;
 			}
 		}
-		System.out.println(new Gson().toJson(s));
 		return s;
 	}
 
