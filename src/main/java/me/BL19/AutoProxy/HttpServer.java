@@ -7,11 +7,18 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.message.BasicNameValuePair;
+import org.yaml.snakeyaml.util.ArrayUtils;
 
 import com.google.gson.Gson;
 
@@ -143,9 +150,32 @@ public class HttpServer extends NanoHTTPD {
 			}
 			System.out.println(new Gson().toJson(addr));
 			String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
-			System.out.println(uri + " -> " + address);
-			URL url = new URL(address
-					+ (session.getQueryParameterString() != null ? "?" + session.getQueryParameterString() : ""));
+			List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(), Charset.defaultCharset());
+			List<NameValuePair> newParams = new ArrayList<NameValuePair>();
+			ProxyAddress refererProxy = null;
+			try {
+				refererProxy = AutoProxy.getTarget(session.getHeaders().get("referer").replace("http://" + session.getHeaders().get("host"), ""));
+			} catch (NullPointerException e) {}
+//			if(refererProxy != null && queryParams != null)
+//				queryParams = queryParams.replace("http://" + session.getHeaders().get("host"), refererProxy.url);
+			
+			
+			
+			for (NameValuePair k : queryParams) {
+				if(k.getName().equalsIgnoreCase("origin")) {
+					newParams.add(new BasicNameValuePair(k.getName(), refererProxy.url));
+				} else {
+					newParams.add(k);
+				}
+			}
+			
+		
+			
+			
+			String newAddr = address
+					+ (session.getQueryParameterString() != null ? "?" + URLEncodedUtils.format(newParams, Charset.defaultCharset()) : "");
+			System.out.println(uri + " -> " + newAddr);
+			URL url = new URL(newAddr);
 			con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod(session.getMethod().name());
 
@@ -156,7 +186,7 @@ public class HttpServer extends NanoHTTPD {
 				String replacement = addr.url;
 				String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 				for (String key : session.getHeaders().keySet()) {
-					if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer"))
+					if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer") || key.equalsIgnoreCase("Origin"))
 						continue;
 //					con.setRequestProperty(key, session.getHeaders().get(key));
 					String field = String.join(";", session.getHeaders().get(key));
@@ -171,6 +201,9 @@ public class HttpServer extends NanoHTTPD {
 			if (session.getHeaders().get("referer") != null)
 				con.setRequestProperty("referer", session.getHeaders().get("referer")
 						.replace("http://" + session.getHeaders().get("host") + addr.suburl, addr.url));
+			
+			if (session.getHeaders().get("origin") != null && refererProxy != null)
+				con.setRequestProperty("origin", refererProxy.url);
 			Map<String, List<String>> requestProperties = con.getRequestProperties();
 			int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
@@ -213,7 +246,10 @@ public class HttpServer extends NanoHTTPD {
 						// Has base tag needs removal
 						int b = theString.indexOf("<base");
 						String s = theString.substring(b);
-						s = s.substring(0, s.indexOf("/>")); // <base href="*" / <base href="*"><base
+						if(s.indexOf("/>") != -1)
+							s = s.substring(0, s.indexOf("/>")); // <base href="*" / <base href="*"><base
+						else
+							s = s.substring(0, s.indexOf(">"));
 						String baseTag = s + "";
 						s = s.substring(s.indexOf("href=\""));
 						s = s.replace("\"", "");
@@ -246,13 +282,16 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					theString = theString.replaceAll(regx, replacement);
 				}
-				
-				if(addr.replaceWithOtherAdresses) {
+
+				if (addr.replaceWithOtherAdresses) {
 					for (ProxyAddress a : AutoProxy.proxiedAddresses) {
-						String host = getHost(a.url);
-						String replacement = "http://" + session.getHeaders().get("host") + a.suburl;
-						String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
-						theString = theString.replaceAll(regx, replacement);
+						try {
+							String host = getHost(a.url);
+							String replacement = "http://" + session.getHeaders().get("host") + a.suburl;
+							String regx = "(https|http):(\\/\\/)(" + host.replace(".", "\\.") + ")";
+							theString = theString.replaceAll(regx, replacement);
+						} catch (Exception e) {
+						}
 					}
 				}
 			}
