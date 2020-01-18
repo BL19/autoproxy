@@ -16,6 +16,8 @@ import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import com.google.gson.Gson;
+
 import me.BL19.API.Log.Logger;
 import me.BL19.API.Log.modules.ConsoleModule;
 
@@ -92,6 +94,7 @@ public class AutoProxy {
 		}
 		if (cmd.hasOption("port")) {
 			conf.port = Integer.parseInt(cmd.getOptionValue("port"));
+			System.out.println("Set port " + conf.port);
 		}
 		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
@@ -128,6 +131,7 @@ public class AutoProxy {
 //			return null;
 		List<ProxyAddress> possibleMatches = new ArrayList<ProxyAddress>();
 		for (ProxyAddress proxyAddress : proxiedAddresses) {
+			System.out.println(proxyAddress.suburl);
 			if (match(suburl, proxyAddress.suburl) != null) {
 				possibleMatches.add(proxyAddress);
 			}
@@ -136,11 +140,12 @@ public class AutoProxy {
 		ProxyAddress s = null;
 		for (ProxyAddress proxyAddress : possibleMatches) {
 			if (proxyAddress.suburl.length() > l) {
-//				System.out.println("new longest " + proxyAddress.suburl);
+				System.out.println("new longest " + proxyAddress.suburl);
 				l = proxyAddress.suburl.length();
 				s = proxyAddress;
 			}
 		}
+		System.out.println(new Gson().toJson(s));
 		return s;
 	}
 
