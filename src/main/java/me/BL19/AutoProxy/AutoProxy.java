@@ -27,60 +27,73 @@ public class AutoProxy {
 	public static String key = KeyForgery.generateKey();
 
 	public static void main(String[] args) {
-        Options options = new Options();
-        
-        Option port = new Option("p", "port", true, "The hosting port override");
-        port.setRequired(false);
-        options.addOption(port);
-        
-        Option defaultHost = new Option("d", "default", true, "The default host when a config is not found");
-        defaultHost.setRequired(false);
-        options.addOption(defaultHost);
-        
-        CommandLine cmd = null;
-        
-        try {
-            cmd = new DefaultParser().parse(options, args);
-        } catch (ParseException e) {
-            System.out.println(e.getMessage());
-            new HelpFormatter().printHelp("AutoProxy", options);
+		Options options = new Options();
 
-            System.exit(1);
-        }
-        
+		Option port = new Option("p", "port", true, "The hosting port override");
+		port.setRequired(false);
+		options.addOption(port);
+
+		Option defaultHost = new Option("d", "default", true, "The default host when a config is not found");
+		defaultHost.setRequired(false);
+		options.addOption(defaultHost);
+
+		CommandLine cmd = null;
+
+		try {
+			cmd = new DefaultParser().parse(options, args);
+		} catch (ParseException e) {
+			System.out.println(e.getMessage());
+			new HelpFormatter().printHelp("AutoProxy", options);
+
+			System.exit(1);
+		}
+
 		l.enableMasterModule(new ConsoleModule());
 		l.info("To POST a config to '/config' use the key '" + key + "'");
 		try {
 			loadConfig();
 		} catch (IOException e) {
-			conf = new AutoProxyConfig(); // Null pointer
-			conf.adresses = new HashMap<String, ProxyAddress>();
-			conf.fileTypesToIgnore = new ArrayList<String>();
-			if(cmd.hasOption("default")) {
+			if (conf == null)
+				conf = new AutoProxyConfig(); // Null pointer
+			if (conf.adresses == null)
+				conf.adresses = new HashMap<String, ProxyAddress>();
+			if (conf.fileTypesToIgnore == null)
+				conf.fileTypesToIgnore = new ArrayList<String>();
+			conf.fileTypesToIgnore.add("ttf");
+			conf.fileTypesToIgnore.add("woff");
+			conf.fileTypesToIgnore.add("ico");
+			conf.fileTypesToIgnore.add("woff2");
+			conf.fileTypesToIgnore.add("png");
+			conf.fileTypesToIgnore.add("jpg");
+			conf.fileTypesToIgnore.add("jpeg");
+			conf.allowReplace = true;
+			if (cmd.hasOption("default")) {
 				ProxyAddress p = new ProxyAddress();
 				p.enabled = true;
 				p.suburl = "/";
 				p.url = cmd.getOptionValue("default");
-				conf.adresses.put("default", p);
+				conf.adresses.put("root", p);
+				conf.port = 80;
 				l.info("Config not found added '" + p.url + "' as default at '/' (OPT)");
-			} else if(System.getenv("apdefault") != null) {
-			
+			} else if (System.getenv("apdefault") != null) {
+
 				ProxyAddress p = new ProxyAddress();
 				p.enabled = true;
 				p.suburl = "/";
 				p.url = System.getenv("apdefault");
-				conf.adresses.put("default", p);
+				conf.adresses.put("root", p);
+				conf.port = 80;
 				l.info("Config not found added '" + p.url + "' as default at '/' (ENV)");
-				
-			}else{
+
+			} else {
 				l.error("Failed to load proxies. Need to post new config.");
 				e.printStackTrace();
 			}
 		}
-		if(cmd.hasOption("port")) {
+		if (cmd.hasOption("port")) {
 			conf.port = Integer.parseInt(cmd.getOptionValue("port"));
 		}
-		if(!conf.allowReplace)
+		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
 		new HttpServer();
 	}
@@ -111,18 +124,18 @@ public class AutoProxy {
 	}
 
 	public static ProxyAddress getTarget(String suburl) {
-		if(suburl.equals("/"))
-			return null;
+//		if (suburl.equals("/"))
+//			return null;
 		List<ProxyAddress> possibleMatches = new ArrayList<ProxyAddress>();
 		for (ProxyAddress proxyAddress : proxiedAddresses) {
-			if(match(suburl, proxyAddress.suburl) != null) {
+			if (match(suburl, proxyAddress.suburl) != null) {
 				possibleMatches.add(proxyAddress);
 			}
 		}
 		int l = 0;
 		ProxyAddress s = null;
 		for (ProxyAddress proxyAddress : possibleMatches) {
-			if(proxyAddress.suburl.length() > l) {
+			if (proxyAddress.suburl.length() > l) {
 //				System.out.println("new longest " + proxyAddress.suburl);
 				l = proxyAddress.suburl.length();
 				s = proxyAddress;
@@ -132,13 +145,14 @@ public class AutoProxy {
 	}
 
 	static String match(String suburl1, String suburl2) {
-		if(suburl2.equals("/")) {
+		if (suburl2.equals("/")) {
 			return suburl2;
 		}
-		if(suburl1.equals(suburl2)) return suburl2; // full base remapping
+		if (suburl1.equals(suburl2))
+			return suburl2; // full base remapping
 		suburl1 = (suburl1.startsWith("/") ? suburl1.substring(1) : suburl1);
 		suburl2 = (suburl2.startsWith("/") ? suburl2.substring(1) : suburl2);
-		if(!suburl1.contains(suburl2))
+		if (!suburl1.contains(suburl2))
 			return null;
 //		System.out.println("Matching: " + suburl1 + " & " + suburl2);
 		String[] a = suburl1.split("/");
@@ -158,7 +172,7 @@ public class AutoProxy {
 				}
 				bs = bs.substring(0, bs.length() - 1);
 //				System.out.println("BS (" + j + "): " + bs);
-				if(as.equals(bs)) {
+				if (as.equals(bs)) {
 //					System.out.println("MATCH");
 					matches.add(as);
 				}
@@ -167,7 +181,7 @@ public class AutoProxy {
 		int longest = 0;
 		String longestStr = null;
 		for (String string : matches) {
-			if(string.length() > longest) {
+			if (string.length() > longest) {
 				longest = string.length();
 				longestStr = string;
 			}
