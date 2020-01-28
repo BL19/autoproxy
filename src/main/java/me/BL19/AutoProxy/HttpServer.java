@@ -71,6 +71,7 @@ public class HttpServer extends NanoHTTPD {
 
 	@Override
 	public Response serve(IHTTPSession session) {
+		try {
 		String uri = session.getUri();
 
 		if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null
@@ -214,9 +215,11 @@ public class HttpServer extends NanoHTTPD {
 			}
 
 			if (con.getResponseCode() == 404)
-				return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found");
+				return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found (404) from server");
 			StringWriter writer = new StringWriter();
 
+			
+			
 			InputStream is = null;
 			try {
 				is = con.getInputStream();
@@ -370,6 +373,11 @@ public class HttpServer extends NanoHTTPD {
 			l.error(e, null);
 			e.printStackTrace();
 			return null;
+		}
+		} catch (Exception ex) {
+			l.error(ex, null);
+			ex.printStackTrace();
+			return newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P");
 		}
 	}
 
