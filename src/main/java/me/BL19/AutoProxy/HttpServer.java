@@ -348,7 +348,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 			}
 			String content = con.getHeaderField("Content-Type");
-			if (is != null && content.startsWith("image")) {
+			if (is != null && !runActions) {
 				InputStream str = is;
 				String enc = con.getContentEncoding();
 				long len = con.getContentLengthLong();
