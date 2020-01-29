@@ -1,6 +1,7 @@
 package me.BL19.AutoProxy;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -371,10 +372,14 @@ public class HttpServer extends NanoHTTPD {
 			if (is != null && !runActions) {
 				URL website = new URL(newAddr);
 				ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-				FileOutputStream fos = new FileOutputStream("temp");
+				String fName = "temp_" + fileName;
+				FileOutputStream fos = new FileOutputStream(fName);
 				fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 				fos.close();
-				InputStream str = new FileInputStream("temp");
+				try {
+				new File(fName).delete();
+				} catch (Exception e) {}
+				InputStream str = new FileInputStream(fName);
 				long len = str.available();
 				byte[] b1 = IOUtils.toByteArray(str);
 				str.close();
