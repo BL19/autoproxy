@@ -219,7 +219,12 @@ public class HttpServer extends NanoHTTPD {
 
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 				con.setDoOutput(true);
-				IOUtils.copy(session.getInputStream(), con.getOutputStream());
+				int nRead;
+			    byte[] data = new byte[1024];
+			    while ((nRead = session.getInputStream().read(data, 0, data.length)) != -1) {
+			    	con.getOutputStream().write(data, 0, nRead);
+			    }
+//				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
 
@@ -231,7 +236,6 @@ public class HttpServer extends NanoHTTPD {
 			
 			InputStream is = null;
 			try {
-				con.setDoInput(true);
 				is = con.getInputStream();
 				String enc = con.getContentEncoding();
 //				System.out.println(enc);
