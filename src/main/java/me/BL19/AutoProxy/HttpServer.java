@@ -394,7 +394,7 @@ public class HttpServer extends NanoHTTPD {
 			for (String k : con.getHeaderFields().keySet()) {
 				if (k != null && !k.equalsIgnoreCase("content-length") && !k.equalsIgnoreCase("content-type")
 						&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding")
-						&& !k.equalsIgnoreCase("connection")) {
+						&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control")) {
 					String key = k;
 					String field = String.join(";", con.getHeaderFields().get(k));
 
@@ -407,6 +407,10 @@ public class HttpServer extends NanoHTTPD {
 					res.addHeader(key, field);
 				}
 			}
+			
+			res.addHeader("Access-Control-Allow-Origin", "*");
+			res.addHeader("Access-Control-Allow-Methods", "*");
+			res.addHeader("Access-Control-Allow-Headers", "*");
 
 			return res;
 
