@@ -218,6 +218,7 @@ public class HttpServer extends NanoHTTPD {
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
 
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
+				con.setDoOutput(true);
 				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
@@ -230,6 +231,7 @@ public class HttpServer extends NanoHTTPD {
 			
 			InputStream is = null;
 			try {
+				con.setDoInput(true);
 				is = con.getInputStream();
 				String enc = con.getContentEncoding();
 //				System.out.println(enc);
