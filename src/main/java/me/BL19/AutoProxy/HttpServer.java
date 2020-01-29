@@ -222,11 +222,11 @@ public class HttpServer extends NanoHTTPD {
 
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 				con.setDoOutput(true);
-				int nRead;
-			    byte[] data = new byte[1024];
-			    while ((nRead = session.getInputStream().read(data, 0, data.length)) != -1) {
-			    	con.getOutputStream().write(data, 0, nRead);
-			    }
+			    int ctl = Integer.parseInt(session.getHeaders().get("content-length"));
+			    byte[] data = new byte[ctl];
+			    session.getInputStream().read(data);
+			    con.getOutputStream().write(data);
+			    
 //				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
