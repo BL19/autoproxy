@@ -1,15 +1,19 @@
 package me.BL19.AutoProxy;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -18,7 +22,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
-import org.yaml.snakeyaml.util.ArrayUtils;
 
 import com.google.gson.Gson;
 
@@ -73,7 +76,7 @@ public class HttpServer extends NanoHTTPD {
 	public Response serve(IHTTPSession session) {
 		try {
 		String uri = session.getUri();
-
+		System.out.println(uri);
 		if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null
 				&& AutoProxy.conf.allowReplace) {
 			if (!session.getHeaders().containsKey("apkey")
@@ -324,6 +327,49 @@ public class HttpServer extends NanoHTTPD {
 //			}
 //			theString = GZIPCompression.decompress(theString.getBytes());
 			Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"), theString);
+			
+			String content = con.getHeaderField("Content-Type");
+//			System.out.println(new Gson().toJson(con));
+			
+			String fileName = "";
+            String disposition = con.getHeaderField("Content-Disposition");
+            String contentType = con.getContentType();
+            int contentLength = con.getContentLength();
+ 
+            if (disposition != null) {
+                // extracts file name from header field
+                int index = disposition.indexOf("filename=");
+                if (index > 0) {
+                    fileName = disposition.substring(index + 10,
+                            disposition.length() - 1);
+                }
+            } else {
+                // extracts file name from URL
+                fileName = newAddr.substring(newAddr.lastIndexOf("/") + 1,
+                		newAddr.length());
+            }
+ 
+//            System.out.println("Content-Type = " + contentType);
+//            System.out.println("Content-Disposition = " + disposition);
+//            System.out.println("Content-Length = " + contentLength);
+//            System.out.println("fileName = " + fileName);
+			
+			if (is != null && !runActions) {
+				URL website = new URL(newAddr);
+				ReadableByteChannel rbc = Channels.newChannel(website.openStream());
+				FileOutputStream fos = new FileOutputStream("temp");
+				fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+				fos.close();
+				InputStream str = new FileInputStream("temp");
+				long len = str.available();
+				byte[] b1 = IOUtils.toByteArray(str);
+				str.close();
+				str = new ByteArrayInputStream(b1);
+				len = b1.length;
+				res = newFixedLengthResponse(Status.lookup(con.getResponseCode()), URLConnection.guessContentTypeFromName(fileName), str, len);
+		        res.addHeader("Content-Disposition", "attachment; filename=" + fileName);
+				res.setRequestMethod(session.getMethod());
+			}
 //			if(session.getHeaders().get("accept-encoding") != null && session.getHeaders().get("accept-encoding").contains("gzip")) {
 //				res.setGzipEncoding(true);
 //			}
@@ -347,26 +393,7 @@ public class HttpServer extends NanoHTTPD {
 					res.addHeader(key, field);
 				}
 			}
-			String content = con.getHeaderField("Content-Type");
-			if (is != null && !runActions) {
-				InputStream str = is;
-				String enc = con.getContentEncoding();
-				long len = con.getContentLengthLong();
-				if (enc != null && enc.startsWith("gzip")) {
-					byte[] b1 = IOUtils.toByteArray(is);
-					byte[] b2 = GZIPCompression.decompress(b1).getBytes();
-					str = new ByteArrayInputStream(b2);
-					len = b2.length;
-				} else {
-					byte[] b1 = IOUtils.toByteArray(is);
-					str = new ByteArrayInputStream(b1);
-					len = b1.length;
-				}
-				Response imgRes = newFixedLengthResponse(Status.lookup(con.getResponseCode()), content, str, len);
-				imgRes.setRequestMethod(session.getMethod());
-				imgRes.setGzipEncoding(true);
-				return imgRes;
-			}
+
 			return res;
 
 		} catch (Exception e) {
