@@ -27,6 +27,31 @@ public class AutoProxy {
 	public static Logger l = new Logger(AutoProxy.class);
 	public static AutoProxyConfig conf;
 	public static String key = KeyForgery.generateKey();
+	
+	public static Thread tempRemover = new Thread(new Runnable() {
+		
+		public void run() {
+			while (true) {
+				try {
+					
+					for (File f : new File(".").listFiles()) {
+						if(f.getName().startsWith("temp")) {
+							f.delete();
+						}
+					}
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				try {
+					Thread.sleep(600000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
+	}, "TempRemover");
 
 	public static void main(String[] args) {
 		Options options = new Options();
@@ -105,6 +130,7 @@ public class AutoProxy {
 		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
 		new HttpServer();
+		tempRemover.start();
 	}
 
 	public static void loadConfig() throws IOException {
