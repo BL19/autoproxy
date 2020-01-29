@@ -74,6 +74,14 @@ public class HttpServer extends NanoHTTPD {
 
 	@Override
 	public Response serve(IHTTPSession session) {
+		if(session.getMethod() == Method.OPTIONS) {
+			Response r = newFixedLengthResponse(Status.OK, "text", "OK");
+			r.addHeader("Access-Control-Allow-Origin", "*");
+			r.addHeader("Access-Control-Allow-Methods", "*");
+			r.addHeader("Access-Control-Allow-Headers", "*");
+			r.addHeader("Server", "AutoProxy");
+			return r;
+		}
 		try {
 		String uri = session.getUri();
 		System.out.println(uri);
@@ -213,7 +221,13 @@ public class HttpServer extends NanoHTTPD {
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
 
 			if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
-				IOUtils.copy(session.getInputStream(), con.getOutputStream());
+				con.setDoOutput(true);
+				int nRead;
+			    byte[] data = new byte[1024];
+			    while ((nRead = session.getInputStream().read(data, 0, data.length)) != -1) {
+			    	con.getOutputStream().write(data, 0, nRead);
+			    }
+//				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 				con.getOutputStream().close();
 			}
 

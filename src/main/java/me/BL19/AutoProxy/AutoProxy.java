@@ -74,6 +74,8 @@ public class AutoProxy {
 				p.enabled = true;
 				p.suburl = "/";
 				p.url = cmd.getOptionValue("default");
+				p.hardReplace = true;
+				p.replaceInHeaders = true;
 				conf.adresses.put("root", p);
 				proxiedAddresses.add(p);
 				conf.port = 80;
@@ -84,6 +86,8 @@ public class AutoProxy {
 				p.enabled = true;
 				p.suburl = "/";
 				p.url = System.getenv("apdefault");
+				p.hardReplace = true;
+				p.replaceInHeaders = true;
 				conf.adresses.put("root", p);
 				proxiedAddresses.add(p);
 				conf.port = 80;
