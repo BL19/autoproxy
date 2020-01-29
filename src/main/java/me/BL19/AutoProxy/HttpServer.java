@@ -368,7 +368,7 @@ public class HttpServer extends NanoHTTPD {
 				if (is != null && !runActions) {
 					URL website = new URL(newAddr);
 					ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-					String fName = "temp_" + fileName;
+					String fName = "temp_" + session.getUri().replace("/", "__");
 					if (!new File(fName).exists()) {
 						FileOutputStream fos = new FileOutputStream(fName);
 						fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
