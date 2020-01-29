@@ -71,6 +71,14 @@ public class HttpServer extends NanoHTTPD {
 
 	@Override
 	public Response serve(IHTTPSession session) {
+		if(session.getMethod() == Method.OPTIONS) {
+			Response r = newFixedLengthResponse(Status.OK, "text", "OK");
+			r.addHeader("Access-Control-Allow-Origin", "*");
+			r.addHeader("Access-Control-Allow-Methods", "*");
+			r.addHeader("Access-Control-Allow-Headers", "*");
+			r.addHeader("Server", "AutoProxy");
+			return r;
+		}
 		try {
 		String uri = session.getUri();
 
