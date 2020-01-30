@@ -23,6 +23,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 import com.google.gson.Gson;
 
@@ -85,8 +87,7 @@ public class HttpServer extends NanoHTTPD {
 		}
 		try {
 			String uri = session.getUri();
-			if (uri.equals("/config") && session.getMethod() == Method.POST && AutoProxy.key != null
-					&& AutoProxy.conf.allowReplace) {
+			if (uri.equals("/config") && AutoProxy.key != null) {
 				if (!session.getHeaders().containsKey("apkey")
 						|| !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
 					new Thread(new Runnable() {
@@ -104,29 +105,33 @@ public class HttpServer extends NanoHTTPD {
 				}
 
 				// Key is correct
-
-				Scanner sc = new Scanner(session.getInputStream());
-				StringBuffer sb = new StringBuffer();
-				while (sc.hasNext()) {
-					sb.append(sc.nextLine() + "\n");
+				if (session.getMethod() == Method.POST && AutoProxy.conf.allowReplace) {
+					Scanner sc = new Scanner(session.getInputStream());
+					StringBuffer sb = new StringBuffer();
+					while (sc.hasNext()) {
+						sb.append(sc.nextLine() + "\n");
+					}
+					FileWriter fw;
+					try {
+						fw = new FileWriter("config.yml");
+						fw.write(sb.toString());
+						fw.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+						return newFixedLengthResponse("Err: " + e.getMessage());
+					}
+					try {
+						AutoProxy.loadConfig();
+					} catch (IOException e) {
+						e.printStackTrace();
+						return newFixedLengthResponse("Err: " + e.getMessage());
+					}
+					l.warning("Config has been replaced! (" + session.getRemoteIpAddress() + ")");
+					return newFixedLengthResponse(sb.toString());
+				} else if (session.getMethod() == Method.GET) {
+					Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
+					return newFixedLengthResponse(yml.dump(AutoProxy.conf));
 				}
-				FileWriter fw;
-				try {
-					fw = new FileWriter("config.yml");
-					fw.write(sb.toString());
-					fw.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-					return newFixedLengthResponse("Err: " + e.getMessage());
-				}
-				try {
-					AutoProxy.loadConfig();
-				} catch (IOException e) {
-					e.printStackTrace();
-					return newFixedLengthResponse("Err: " + e.getMessage());
-				}
-				l.warning("Config has been replaced! (" + session.getRemoteIpAddress() + ")");
-				return newFixedLengthResponse(sb.toString());
 			}
 
 			ProxyAddress addr = AutoProxy.getTarget(uri);
