@@ -87,6 +87,10 @@ public class HttpServer extends NanoHTTPD {
 		}
 		try {
 			String uri = session.getUri();
+			while(uri.startsWith("/")) {
+				uri = uri.substring(1);
+			}
+			uri = "/" + uri;
 			if (uri.equals("/config") && AutoProxy.key != null) {
 				if (!session.getHeaders().containsKey("apkey")
 						|| !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
@@ -282,12 +286,18 @@ public class HttpServer extends NanoHTTPD {
 								s = (addr.suburl.startsWith("/") ? "" : "/") + addr.suburl + s;
 							}
 							if(s.startsWith("http")) {
-								String uriBase = s.substring(s.indexOf('/') + 1);
+								String uriBase = s.substring(s.indexOf('/') + 2);
 								if(uriBase.contains("/"))
-									uriBase = uriBase.substring(uriBase.indexOf('/'));
-								s = "http://" + session.getHeaders().get("host") + addr.suburl + "/" + uriBase;
+									uriBase = uriBase.substring(uriBase.indexOf('/') + 1);
+								else
+									uriBase = "";
+								System.out.println(uriBase);
+								String uriAddon = addr.suburl + "/" + uriBase;
+								while(uriAddon.startsWith("/"))
+									uriAddon = uriAddon.substring(1);
+								s = "http://" + session.getHeaders().get("host") + "/" + uriAddon;
 							}
-							if (s.endsWith("/")) {
+							while (s.endsWith("/")) {
 								s = s.substring(0, s.length() - 1);
 							}
 							String base = "<base href=\"" + s + "/\"";
