@@ -171,6 +171,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 				System.out.println(new Gson().toJson(addr));
 				String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
+				address = address.replace("//", "/");
 				List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(),
 						Charset.defaultCharset());
 				List<NameValuePair> newParams = new ArrayList<NameValuePair>();
@@ -303,7 +304,7 @@ public class HttpServer extends NanoHTTPD {
 							String base = "<base href=\"" + s + "/\"";
 							System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 							theString = theString.replace(baseTag, base);
-						} else if (theString.toLowerCase().contains("</head>")) { // localhost:8901/google
+						} else if (theString.toLowerCase().contains("<head>")) { // localhost:8901/google
 							String base = "<head><base href=\"http://" + session.getHeaders().get("host") + addr.suburl
 									+ "\"/>";
 							String pstring = theString;
