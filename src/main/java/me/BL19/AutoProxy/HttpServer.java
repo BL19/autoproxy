@@ -281,11 +281,17 @@ public class HttpServer extends NanoHTTPD {
 							if (s.startsWith("/")) {
 								s = (addr.suburl.startsWith("/") ? "" : "/") + addr.suburl + s;
 							}
+							if(s.startsWith("http")) {
+								String uriBase = s.substring(s.indexOf('/') + 1);
+								if(uriBase.contains("/"))
+									uriBase = uriBase.substring(uriBase.indexOf('/'));
+								s = "http://" + session.getHeaders().get("host") + addr.suburl + "/" + uriBase;
+							}
 							if (s.endsWith("/")) {
 								s = s.substring(0, s.length() - 1);
 							}
 							String base = "<base href=\"" + s + "/\"";
-//						System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
+							System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 							theString = theString.replace(baseTag, base);
 						} else if (theString.toLowerCase().contains("</head>")) { // localhost:8901/google
 							String base = "<base href=\"http://" + session.getHeaders().get("host") + addr.suburl
