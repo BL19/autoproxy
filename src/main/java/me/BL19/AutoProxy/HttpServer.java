@@ -171,7 +171,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 				System.out.println(new Gson().toJson(addr));
 				String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
-				address = address.replace("//", "/");
+				address = address.replace("//", "/").replace(":/", "://");
 				List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(),
 						Charset.defaultCharset());
 				List<NameValuePair> newParams = new ArrayList<NameValuePair>();
