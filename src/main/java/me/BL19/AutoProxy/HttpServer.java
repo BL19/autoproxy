@@ -304,12 +304,12 @@ public class HttpServer extends NanoHTTPD {
 							System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 							theString = theString.replace(baseTag, base);
 						} else if (theString.toLowerCase().contains("</head>")) { // localhost:8901/google
-							String base = "<base href=\"http://" + session.getHeaders().get("host") + addr.suburl
-									+ "\"/></head>";
+							String base = "<head><base href=\"http://" + session.getHeaders().get("host") + addr.suburl
+									+ "\"/>";
 							String pstring = theString;
-							theString = theString.replace("</head>", base);
+							theString = theString.replace("<head>", base);
 							if (theString.equals(pstring)) {
-								theString = theString.replace("</HEAD>", base.replace("</head>", "</HEAD>"));
+								theString = theString.replace("<HEAD>", base.replace("<head>", "<HEAD>"));
 							}
 						}
 					}
