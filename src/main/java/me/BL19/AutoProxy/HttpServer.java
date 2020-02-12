@@ -402,8 +402,13 @@ public class HttpServer extends NanoHTTPD {
 					str.close();
 					str = new ByteArrayInputStream(b1);
 					len = b1.length;
+					if(contentType == null) {
 					res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
 							URLConnection.guessContentTypeFromName(fileName), str, len);
+					} else {
+						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
+								contentType, str, len);
+					}
 					res.addHeader("Content-Disposition", "attachment; filename=" + fileName);
 					res.setRequestMethod(session.getMethod());
 				}
