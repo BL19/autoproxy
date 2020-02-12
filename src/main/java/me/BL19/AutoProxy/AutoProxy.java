@@ -93,6 +93,7 @@ public class AutoProxy {
 			conf.fileTypesToIgnore.add("png");
 			conf.fileTypesToIgnore.add("jpg");
 			conf.fileTypesToIgnore.add("jpeg");
+			conf.fileTypesToIgnore.add("ics");
 			conf.allowReplace = true;
 			if (cmd.hasOption("default")) {
 				ProxyAddress p = new ProxyAddress();
