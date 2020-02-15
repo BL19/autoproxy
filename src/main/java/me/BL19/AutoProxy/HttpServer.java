@@ -87,6 +87,10 @@ public class HttpServer extends NanoHTTPD {
 		}
 		try {
 			String uri = session.getUri();
+			while(uri.startsWith("/")) {
+				uri = uri.substring(1);
+			}
+			uri = "/" + uri;
 			if (uri.equals("/config") && AutoProxy.key != null) {
 				if (!session.getHeaders().containsKey("apkey")
 						|| !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
@@ -167,6 +171,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 				System.out.println(new Gson().toJson(addr));
 				String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
+				address = address.replace("//", "/").replace(":/", "://");
 				List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(),
 						Charset.defaultCharset());
 				List<NameValuePair> newParams = new ArrayList<NameValuePair>();
@@ -281,19 +286,31 @@ public class HttpServer extends NanoHTTPD {
 							if (s.startsWith("/")) {
 								s = (addr.suburl.startsWith("/") ? "" : "/") + addr.suburl + s;
 							}
-							if (s.endsWith("/")) {
+							if(s.startsWith("http")) {
+								String uriBase = s.substring(s.indexOf('/') + 2);
+								if(uriBase.contains("/"))
+									uriBase = uriBase.substring(uriBase.indexOf('/') + 1);
+								else
+									uriBase = "";
+								System.out.println(uriBase);
+								String uriAddon = addr.suburl + "/" + uriBase;
+								while(uriAddon.startsWith("/"))
+									uriAddon = uriAddon.substring(1);
+								s = "http://" + session.getHeaders().get("host") + "/" + uriAddon;
+							}
+							while (s.endsWith("/")) {
 								s = s.substring(0, s.length() - 1);
 							}
 							String base = "<base href=\"" + s + "/\"";
-//						System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
+							System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 							theString = theString.replace(baseTag, base);
-						} else if (theString.toLowerCase().contains("</head>")) { // localhost:8901/google
-							String base = "<base href=\"http://" + session.getHeaders().get("host") + addr.suburl
-									+ "\"/></head>";
+						} else if (theString.toLowerCase().contains("<head>")) { // localhost:8901/google
+							String base = "<head><base href=\"http://" + session.getHeaders().get("host") + addr.suburl
+									+ "\"/>";
 							String pstring = theString;
-							theString = theString.replace("</head>", base);
+							theString = theString.replace("<head>", base);
 							if (theString.equals(pstring)) {
-								theString = theString.replace("</HEAD>", base.replace("</head>", "</HEAD>"));
+								theString = theString.replace("<HEAD>", base.replace("<head>", "<HEAD>"));
 							}
 						}
 					}
@@ -385,8 +402,13 @@ public class HttpServer extends NanoHTTPD {
 					str.close();
 					str = new ByteArrayInputStream(b1);
 					len = b1.length;
+					if(contentType == null) {
 					res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
 							URLConnection.guessContentTypeFromName(fileName), str, len);
+					} else {
+						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
+								contentType, str, len);
+					}
 					res.addHeader("Content-Disposition", "attachment; filename=" + fileName);
 					res.setRequestMethod(session.getMethod());
 				}
