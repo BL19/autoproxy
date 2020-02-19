@@ -139,8 +139,8 @@ public class HttpServer extends NanoHTTPD {
 			}
 
 			ProxyAddress addr = AutoProxy.getTarget(uri);
+			String ref = session.getHeaders().get("referer");
 			if (addr == null) {
-				String ref = session.getHeaders().get("referer");
 
 				if (ref != null) {
 
