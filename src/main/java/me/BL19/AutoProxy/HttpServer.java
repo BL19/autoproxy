@@ -1,5 +1,6 @@
 package me.BL19.AutoProxy;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -25,8 +27,6 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
-
-import com.google.gson.Gson;
 
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
@@ -169,7 +169,7 @@ public class HttpServer extends NanoHTTPD {
 					if (uri.endsWith("." + s))
 						runActions = false;
 				}
-				System.out.println(new Gson().toJson(addr));
+//				System.out.println1(new Gson().toJson(addr));
 				String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
 				address = address.replace("//", "/").replace(":/", "://");
 				List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(),
@@ -195,11 +195,13 @@ public class HttpServer extends NanoHTTPD {
 				String newAddr = address + (session.getQueryParameterString() != null
 						? "?" + URLEncodedUtils.format(newParams, Charset.defaultCharset())
 						: "");
-				System.out.println(uri + " -> " + newAddr);
+				System.out.println("[" +session.getMethod().name() + "] " + uri + " -> " + newAddr);
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
 
+
+				
 				con.setUseCaches(false);
 
 				{
@@ -208,7 +210,7 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					for (String key : session.getHeaders().keySet()) {
 						if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer")
-								|| key.equalsIgnoreCase("Origin"))
+								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length") || key.contentEquals("remote-addr") || key.equalsIgnoreCase("http-client-ip"))
 							continue;
 //					con.setRequestProperty(key, session.getHeaders().get(key));
 						String field = String.join(";", session.getHeaders().get(key));
@@ -222,24 +224,25 @@ public class HttpServer extends NanoHTTPD {
 				}
 				if (session.getHeaders().get("referer") != null)
 					con.setRequestProperty("referer", session.getHeaders().get("referer")
-							.replace("http://" + session.getHeaders().get("host") + addr.suburl, addr.url));
+							.replace("http://" + session.getHeaders().get("host") + addr.suburl, addr.url).replace("//", "/").replace(":/", "://"));
 
 				if (session.getHeaders().get("origin") != null && refererProxy != null)
 					con.setRequestProperty("origin", refererProxy.url);
 				Map<String, List<String>> requestProperties = con.getRequestProperties();
 				int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
-
+				
 				if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 					con.setDoOutput(true);
 					int ctl = Integer.parseInt(session.getHeaders().get("content-length"));
 					byte[] data = new byte[ctl];
 					session.getInputStream().read(data);
 					con.getOutputStream().write(data);
-
+//					System.out.println("Wrote data: " + new String(data));
 //				IOUtils.copy(session.getInputStream(), con.getOutputStream());
 					con.getOutputStream().close();
 				}
+				
 
 				if (con.getResponseCode() == 404)
 					return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found (404) from server");
@@ -252,13 +255,26 @@ public class HttpServer extends NanoHTTPD {
 //				System.out.println(enc);
 					if (enc == null || !enc.startsWith("gzip")) {
 //					System.out.println("Encoding: " + enc + " (using none)");
-						IOUtils.copy(is, writer);
+						if(con.getHeaderField("Content-Length") != null) {
+							BufferedReader in = new BufferedReader(new InputStreamReader(
+									is));
+							
+							String inputLine;
+
+							while ((inputLine = in.readLine()) != null) {
+								writer.append(inputLine + "\n");
+							}
+							in.close();
+						} else {
+							IOUtils.copy(is, writer);
+						}
 					} else if (enc.startsWith("gzip")) {
 //					System.out.println("Encoding: GZIP");
 //					IOUtils.copy(is, writer, (enc == null || enc.equals("gzip") ? "UTF-8" : enc));
 						writer.append(GZIPCompression.decompress(IOUtils.toByteArray(is)));
 					}
 				} catch (IOException ex) {
+					ex.printStackTrace();
 					return newFixedLengthResponse(Status.lookup(con.getResponseCode()), "text",
 							"Error! Server returned " + con.getResponseCode() + " ("
 									+ Status.lookup(con.getResponseCode()).name() + ")\nMethod: "
@@ -296,6 +312,7 @@ public class HttpServer extends NanoHTTPD {
 								String uriAddon = addr.suburl + "/" + uriBase;
 								while(uriAddon.startsWith("/"))
 									uriAddon = uriAddon.substring(1);
+								uriAddon += "/";
 								s = "http://" + session.getHeaders().get("host") + "/" + uriAddon;
 							}
 							while (s.endsWith("/")) {
@@ -306,7 +323,7 @@ public class HttpServer extends NanoHTTPD {
 							theString = theString.replace(baseTag, base);
 						} else if (theString.toLowerCase().contains("<head>")) { // localhost:8901/google
 							String base = "<head><base href=\"http://" + session.getHeaders().get("host") + addr.suburl
-									+ "\"/>";
+									+ "/\"/>";
 							String pstring = theString;
 							theString = theString.replace("<head>", base);
 							if (theString.equals(pstring)) {
