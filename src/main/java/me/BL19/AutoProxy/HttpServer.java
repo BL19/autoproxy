@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.io.ObjectInputStream.GetField;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -29,6 +30,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import fi.iki.elonen.NanoHTTPD;
+import fi.iki.elonen.NanoHTTPD.Response;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import me.BL19.API.Log.Logger;
 
@@ -210,7 +212,7 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					for (String key : session.getHeaders().keySet()) {
 						if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer")
-								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length") || key.contentEquals("remote-addr") || key.equalsIgnoreCase("http-client-ip"))
+								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length") || key.contentEquals("remote-addr") || key.equalsIgnoreCase("http-client-ip") || key.toLowerCase().startsWith("ap-"))
 							continue;
 //					con.setRequestProperty(key, session.getHeaders().get(key));
 						String field = String.join(";", session.getHeaders().get(key));
@@ -228,6 +230,8 @@ public class HttpServer extends NanoHTTPD {
 
 				if (session.getHeaders().get("origin") != null && refererProxy != null)
 					con.setRequestProperty("origin", refererProxy.url);
+				
+				con.setRequestProperty("AP-Request", "True");
 				Map<String, List<String>> requestProperties = con.getRequestProperties();
 				int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
@@ -377,6 +381,11 @@ public class HttpServer extends NanoHTTPD {
 //				theString = new String(GZIPCompression.compress(theString));
 //			}
 //			theString = GZIPCompression.decompress(theString.getBytes());
+				
+				if(theString.equalsIgnoreCase("ap-file")) {
+					return getResponseFromFile(con.getHeaderField("ap-file"));
+				}
+				
 				Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
 						theString);
 
@@ -437,9 +446,11 @@ public class HttpServer extends NanoHTTPD {
 				String replacement = "http://" + session.getHeaders().get("host") + addr.suburl;
 				String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 				for (String k : con.getHeaderFields().keySet()) {
+					if(k != null)
+						k = k.toLowerCase();
 					if (k != null && !k.equalsIgnoreCase("content-length") && !k.equalsIgnoreCase("content-type")
 							&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding")
-							&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control")) {
+							&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control") && !k.startsWith("ap-")) {
 						String key = k;
 						String field = String.join(";", con.getHeaderFields().get(k));
 
@@ -468,6 +479,28 @@ public class HttpServer extends NanoHTTPD {
 			l.error(ex, null);
 			ex.printStackTrace();
 			return newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P");
+		}
+	}
+	public Response getResponseFromFileThrows(String file) throws IOException {
+		InputStream str = new FileInputStream(file);
+		long len = str.available();
+		byte[] b1 = IOUtils.toByteArray(str);
+		str.close();
+		str = new ByteArrayInputStream(b1);
+		len = b1.length;
+		Response res;
+			res =  newFixedLengthResponse(Status.OK,
+				URLConnection.guessContentTypeFromName(file), str, len);
+		res.addHeader("Content-Disposition", "attachment; filename=" + new File(file).getName());
+		return res;
+	}
+	
+	public Response getResponseFromFile(String file) {
+		try {
+			return getResponseFromFileThrows(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return newFixedLengthResponse(Status.NOT_FOUND, "text", e.getMessage());
 		}
 	}
 
