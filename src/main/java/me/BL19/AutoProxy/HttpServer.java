@@ -382,7 +382,7 @@ public class HttpServer extends NanoHTTPD {
 //			}
 //			theString = GZIPCompression.decompress(theString.getBytes());
 				
-				if(theString.equalsIgnoreCase("ap-file")) {
+				if(theString.toLowerCase().startsWith("ap-file") || con.getHeaderField("ap-file") != null) {
 					return getResponseFromFile(con.getHeaderField("ap-file"));
 				}
 				
