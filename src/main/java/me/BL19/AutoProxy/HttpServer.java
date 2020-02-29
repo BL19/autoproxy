@@ -451,16 +451,24 @@ public class HttpServer extends NanoHTTPD {
 					if (k != null && !k.equalsIgnoreCase("content-length") && !k.equalsIgnoreCase("content-type")
 							&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding")
 							&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control") && !k.startsWith("ap-")) {
-						String key = k;
-						String field = String.join(";", con.getHeaderFields().get(k));
-
-						if (addr.replaceInHeaders && runActions)
-							field = field.replaceAll(regx, replacement);
-
-//					if (runActions)
-//						System.out.println(key + ": " + field);
-
-						res.addHeader(key, field);
+						try {
+							String key = k;
+							if(con.getHeaderFields().get(k) == null) {
+								res.addHeader(key, null);
+								continue;
+							}
+							String field = String.join(";", con.getHeaderFields().get(k));
+	
+							if (addr.replaceInHeaders && runActions)
+								field = field.replaceAll(regx, replacement);
+	
+	//					if (runActions)
+	//						System.out.println(key + ": " + field);
+	
+							res.addHeader(key, field);
+						} catch (Exception ex) {
+							
+						}
 					}
 				}
 
