@@ -89,7 +89,7 @@ public class HttpServer extends NanoHTTPD {
 		}
 		try {
 			String uri = session.getUri();
-			while(uri.startsWith("/")) {
+			while (uri.startsWith("/")) {
 				uri = uri.substring(1);
 			}
 			uri = "/" + uri;
@@ -197,13 +197,11 @@ public class HttpServer extends NanoHTTPD {
 				String newAddr = address + (session.getQueryParameterString() != null
 						? "?" + URLEncodedUtils.format(newParams, Charset.defaultCharset())
 						: "");
-				System.out.println("[" +session.getMethod().name() + "] " + uri + " -> " + newAddr);
+				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr);
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
 
-
-				
 				con.setUseCaches(false);
 
 				{
@@ -212,7 +210,9 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					for (String key : session.getHeaders().keySet()) {
 						if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer")
-								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length") || key.contentEquals("remote-addr") || key.equalsIgnoreCase("http-client-ip") || key.toLowerCase().startsWith("ap-"))
+								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length")
+								|| key.contentEquals("remote-addr") || key.equalsIgnoreCase("http-client-ip")
+								|| key.toLowerCase().startsWith("ap-"))
 							continue;
 //					con.setRequestProperty(key, session.getHeaders().get(key));
 						String field = String.join(";", session.getHeaders().get(key));
@@ -225,28 +225,32 @@ public class HttpServer extends NanoHTTPD {
 					}
 				}
 				if (session.getHeaders().get("referer") != null)
-					con.setRequestProperty("referer", session.getHeaders().get("referer")
-							.replace("http://" + session.getHeaders().get("host") + addr.suburl, addr.url).replace("//", "/").replace(":/", "://"));
+					con.setRequestProperty("referer",
+							session.getHeaders().get("referer")
+									.replace("http://" + session.getHeaders().get("host") + addr.suburl, addr.url)
+									.replace("//", "/").replace(":/", "://"));
 
 				if (session.getHeaders().get("origin") != null && refererProxy != null)
 					con.setRequestProperty("origin", refererProxy.url);
-				
+
 				con.setRequestProperty("AP-Request", "True");
 				Map<String, List<String>> requestProperties = con.getRequestProperties();
 				int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
-				
+
 				if (session.getInputStream() != null && session.getInputStream().available() >= 1) {
 					con.setDoOutput(true);
-					int ctl = Integer.parseInt(session.getHeaders().get("content-length"));
-					byte[] data = new byte[ctl];
-					session.getInputStream().read(data);
-					con.getOutputStream().write(data);
+					String ctntLen = session.getHeaders().get("content-length");
+					if (ctntLen != null) {
+						int ctl = Integer.parseInt(ctntLen);
+						byte[] data = new byte[ctl];
+						session.getInputStream().read(data);
+						con.getOutputStream().write(data);
 //					System.out.println("Wrote data: " + new String(data));
 //				IOUtils.copy(session.getInputStream(), con.getOutputStream());
-					con.getOutputStream().close();
+						con.getOutputStream().close();
+					}
 				}
-				
 
 				if (con.getResponseCode() == 404)
 					return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found (404) from server");
@@ -259,10 +263,9 @@ public class HttpServer extends NanoHTTPD {
 //				System.out.println(enc);
 					if (enc == null || !enc.startsWith("gzip")) {
 //					System.out.println("Encoding: " + enc + " (using none)");
-						if(con.getHeaderField("Content-Length") != null) {
-							BufferedReader in = new BufferedReader(new InputStreamReader(
-									is));
-							
+						if (con.getHeaderField("Content-Length") != null) {
+							BufferedReader in = new BufferedReader(new InputStreamReader(is));
+
 							String inputLine;
 
 							while ((inputLine = in.readLine()) != null) {
@@ -306,15 +309,15 @@ public class HttpServer extends NanoHTTPD {
 							if (s.startsWith("/")) {
 								s = (addr.suburl.startsWith("/") ? "" : "/") + addr.suburl + s;
 							}
-							if(s.startsWith("http")) {
+							if (s.startsWith("http")) {
 								String uriBase = s.substring(s.indexOf('/') + 2);
-								if(uriBase.contains("/"))
+								if (uriBase.contains("/"))
 									uriBase = uriBase.substring(uriBase.indexOf('/') + 1);
 								else
 									uriBase = "";
 								System.out.println(uriBase);
 								String uriAddon = addr.suburl + "/" + uriBase;
-								while(uriAddon.startsWith("/"))
+								while (uriAddon.startsWith("/"))
 									uriAddon = uriAddon.substring(1);
 								uriAddon += "/";
 								s = "http://" + session.getHeaders().get("host") + "/" + uriAddon;
@@ -381,11 +384,11 @@ public class HttpServer extends NanoHTTPD {
 //				theString = new String(GZIPCompression.compress(theString));
 //			}
 //			theString = GZIPCompression.decompress(theString.getBytes());
-				
-				if(theString.toLowerCase().startsWith("ap-file") || con.getHeaderField("ap-file") != null) {
+
+				if (theString.toLowerCase().startsWith("ap-file") || con.getHeaderField("ap-file") != null) {
 					return getResponseFromFile(con.getHeaderField("ap-file"));
 				}
-				
+
 				Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
 						theString);
 
@@ -428,12 +431,11 @@ public class HttpServer extends NanoHTTPD {
 					str.close();
 					str = new ByteArrayInputStream(b1);
 					len = b1.length;
-					if(contentType == null) {
-					res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
-							URLConnection.guessContentTypeFromName(fileName), str, len);
-					} else {
+					if (contentType == null) {
 						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
-								contentType, str, len);
+								URLConnection.guessContentTypeFromName(fileName), str, len);
+					} else {
+						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()), contentType, str, len);
 					}
 					res.addHeader("Content-Disposition", "attachment; filename=" + fileName);
 					res.setRequestMethod(session.getMethod());
@@ -446,28 +448,29 @@ public class HttpServer extends NanoHTTPD {
 				String replacement = "http://" + session.getHeaders().get("host") + addr.suburl;
 				String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 				for (String k : con.getHeaderFields().keySet()) {
-					if(k != null)
+					if (k != null)
 						k = k.toLowerCase();
 					if (k != null && !k.equalsIgnoreCase("content-length") && !k.equalsIgnoreCase("content-type")
 							&& !k.equalsIgnoreCase("content-encoding") && !k.equalsIgnoreCase("Transfer-Encoding")
-							&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control") && !k.startsWith("ap-")) {
+							&& !k.equalsIgnoreCase("connection") && !k.startsWith("access-control")
+							&& !k.startsWith("ap-")) {
 						try {
 							String key = k;
-							if(con.getHeaderFields().get(k) == null) {
+							if (con.getHeaderFields().get(k) == null) {
 								res.addHeader(key, null);
 								continue;
 							}
 							String field = String.join(";", con.getHeaderFields().get(k));
-	
+
 							if (addr.replaceInHeaders && runActions)
 								field = field.replaceAll(regx, replacement);
-	
-	//					if (runActions)
-	//						System.out.println(key + ": " + field);
-	
+
+							// if (runActions)
+							// System.out.println(key + ": " + field);
+
 							res.addHeader(key, field);
 						} catch (Exception ex) {
-							
+
 						}
 					}
 				}
@@ -489,6 +492,7 @@ public class HttpServer extends NanoHTTPD {
 			return newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P");
 		}
 	}
+
 	public Response getResponseFromFileThrows(String file) throws IOException {
 		InputStream str = new FileInputStream(file);
 		long len = str.available();
@@ -497,12 +501,11 @@ public class HttpServer extends NanoHTTPD {
 		str = new ByteArrayInputStream(b1);
 		len = b1.length;
 		Response res;
-			res =  newFixedLengthResponse(Status.OK,
-				URLConnection.guessContentTypeFromName(file), str, len);
+		res = newFixedLengthResponse(Status.OK, URLConnection.guessContentTypeFromName(file), str, len);
 		res.addHeader("Content-Disposition", "attachment; filename=" + new File(file).getName());
 		return res;
 	}
-	
+
 	public Response getResponseFromFile(String file) {
 		try {
 			return getResponseFromFileThrows(file);
