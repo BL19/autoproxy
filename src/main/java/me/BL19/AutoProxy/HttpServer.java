@@ -197,7 +197,9 @@ public class HttpServer extends NanoHTTPD {
 				String newAddr = address + (session.getQueryParameterString() != null
 						? "?" + URLEncodedUtils.format(newParams, Charset.defaultCharset())
 						: "");
-				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr);
+				String ip = session.getHeaders().containsKey("ap-clientip") ? session.getHeaders().get("ap-clientip") : session.getHeaders().get("http-client-ip");
+				String agent = session.getHeaders().containsKey("ap-agent") ? session.getHeaders().get("ap-agent") : session.getHeaders().get("user-agent");
+				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr + "\t" + ip);
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
@@ -219,6 +221,10 @@ public class HttpServer extends NanoHTTPD {
 
 						if (addr.replaceInHeaders && runActions)
 							field = field.replaceAll(regx, replacement);
+						
+						if(key.equalsIgnoreCase("user-agent"))
+							con.setRequestProperty(key, agent);
+						
 
 						con.setRequestProperty(key, field);
 //				System.out.println(key + ": " + session.getHeaders().get(key));
@@ -234,6 +240,8 @@ public class HttpServer extends NanoHTTPD {
 					con.setRequestProperty("origin", refererProxy.url);
 
 				con.setRequestProperty("AP-Request", "True");
+				con.setRequestProperty("AP-ClientIP", ip);
+				con.setRequestProperty("AP-Agent", agent);
 				Map<String, List<String>> requestProperties = con.getRequestProperties();
 				int lslash = addr.url.indexOf("/", 8);
 //			session.getHeaders().put("host", lslash == -1 ? addr.url.replace("http://", "").replace("https://", "") : addr.url.substring(0, lslash).replace("http://", "").replace("https://", ""));
