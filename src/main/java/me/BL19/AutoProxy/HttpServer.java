@@ -199,7 +199,16 @@ public class HttpServer extends NanoHTTPD {
 						: "");
 				String ip = session.getHeaders().containsKey("ap-clientip") ? session.getHeaders().get("ap-clientip") : session.getHeaders().get("http-client-ip");
 				String agent = session.getHeaders().containsKey("ap-agent") ? session.getHeaders().get("ap-agent") : session.getHeaders().get("user-agent");
-				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr + "\t" + ip);
+				
+				
+				//
+				// LOG REQUEST
+				//
+				
+				String log = String.format("[%-4s] %-60s -> %-100s %-15s %-20s", session.getMethod().name(), uri, newAddr, ip, agent);
+				System.out.println(log);
+//				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr + "\t" + ip);
+				
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
