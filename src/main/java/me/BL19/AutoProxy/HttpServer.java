@@ -1,5 +1,6 @@
 package me.BL19.AutoProxy;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -10,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
-import java.io.ObjectInputStream.GetField;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -30,7 +30,6 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import me.BL19.API.Log.Logger;
 
@@ -40,9 +39,28 @@ public class HttpServer extends NanoHTTPD {
 
 	public HttpServer() {
 		super(AutoProxy.conf.port);
+		
 		l.info("Trying to start http server on port " + AutoProxy.conf.port);
 		try {
-			start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+			if(AutoProxy.conf.cert.enabled) {
+				l.info("Starting WebServer with Certificate at " + AutoProxy.conf.cert.file);
+				if(AutoProxy.conf.cert.url) {
+					String filetype = AutoProxy.conf.cert.file.substring(AutoProxy.conf.cert.file.lastIndexOf("."));
+					try (BufferedInputStream in = new BufferedInputStream(new URL(AutoProxy.conf.cert.file).openStream());
+							  FileOutputStream fileOutputStream = new FileOutputStream("cert." + filetype)) {
+							    byte dataBuffer[] = new byte[1024];
+							    int bytesRead;
+							    while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
+							        fileOutputStream.write(dataBuffer, 0, bytesRead);
+							    }
+							} catch (IOException e) {
+							    // handle exception
+							}
+					makeSecure(NanoHTTPD.makeSSLSocketFactory("cert." + filetype, AutoProxy.conf.cert.password.toCharArray()), null);
+				}
+				makeSecure(NanoHTTPD.makeSSLSocketFactory("/" + AutoProxy.conf.cert.file, AutoProxy.conf.cert.password.toCharArray()), null);
+			} else
+				start();
 		} catch (IOException e) {
 			l.error("Failed to start HttpServer");
 			e.printStackTrace();
@@ -197,18 +215,20 @@ public class HttpServer extends NanoHTTPD {
 				String newAddr = address + (session.getQueryParameterString() != null
 						? "?" + URLEncodedUtils.format(newParams, Charset.defaultCharset())
 						: "");
-				String ip = session.getHeaders().containsKey("ap-clientip") ? session.getHeaders().get("ap-clientip") : session.getHeaders().get("http-client-ip");
-				String agent = session.getHeaders().containsKey("ap-agent") ? session.getHeaders().get("ap-agent") : session.getHeaders().get("user-agent");
-				
-				
+				String ip = session.getHeaders().containsKey("ap-clientip") ? session.getHeaders().get("ap-clientip")
+						: session.getHeaders().get("http-client-ip");
+				String agent = session.getHeaders().containsKey("ap-agent") ? session.getHeaders().get("ap-agent")
+						: session.getHeaders().get("user-agent");
+
 				//
 				// LOG REQUEST
 				//
-				
-				String log = String.format("[%-4s] %-60s -> %-100s %-15s %-20s", session.getMethod().name(), uri, newAddr, ip, agent);
+
+				String log = String.format("[%-4s] %-60s -> %-100s %-15s %-20s", session.getMethod().name(), uri,
+						newAddr, ip, agent);
 				System.out.println(log);
 //				System.out.println("[" + session.getMethod().name() + "] " + uri + " -> " + newAddr + "\t" + ip);
-				
+
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
@@ -230,10 +250,9 @@ public class HttpServer extends NanoHTTPD {
 
 						if (addr.replaceInHeaders && runActions)
 							field = field.replaceAll(regx, replacement);
-						
-						if(key.equalsIgnoreCase("user-agent"))
+
+						if (key.equalsIgnoreCase("user-agent"))
 							con.setRequestProperty(key, agent);
-						
 
 						con.setRequestProperty(key, field);
 //				System.out.println(key + ": " + session.getHeaders().get(key));

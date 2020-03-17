@@ -9,5 +9,8 @@ public class AutoProxyConfig {
 	public boolean allowReplace = true;
 	public HashMap<String, ProxyAddress> adresses;
 	public List<String> fileTypesToIgnore;
+	public CertConfig cert;
+	
+	
 	
 }

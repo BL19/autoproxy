@@ -16,8 +16,6 @@ import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-import com.google.gson.Gson;
-
 import me.BL19.API.Log.Logger;
 import me.BL19.API.Log.modules.ConsoleModule;
 
@@ -95,6 +93,22 @@ public class AutoProxy {
 			conf.fileTypesToIgnore.add("jpeg");
 			conf.fileTypesToIgnore.add("ics");
 			conf.allowReplace = true;
+			
+			conf.cert = new CertConfig();
+			if(System.getenv("apcert").equals("true")) {
+				conf.cert.enabled = true;
+				if(System.getenv("apcert.pwd") != null) {
+					conf.cert.password = System.getenv("apcert.pwd");
+				}
+				if(System.getenv("apcert.file") != null) {
+					conf.cert.file = System.getenv("apcert.file");
+				}
+				if(System.getenv("apcert.url") != null) {
+					conf.cert.file = System.getenv("apcert.url");
+					conf.cert.url = true;
+				}
+			}
+			
 			if (cmd.hasOption("default")) {
 				ProxyAddress p = new ProxyAddress();
 				p.enabled = true;
