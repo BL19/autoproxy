@@ -43,7 +43,7 @@ public class HttpServer extends NanoHTTPD {
 		l.info("Trying to start http server on port " + AutoProxy.conf.port);
 		try {
 			if(AutoProxy.conf.cert.enabled) {
-				l.info("Starting WebServer with Certificate at " + AutoProxy.conf.cert.file);
+				l.info("Starting WebServer with Certificate at " + AutoProxy.conf.cert.file + (AutoProxy.conf.cert.url ? " (URL)" : ""));
 				if(AutoProxy.conf.cert.url) {
 					String filetype = AutoProxy.conf.cert.file.substring(AutoProxy.conf.cert.file.lastIndexOf("."));
 					try (BufferedInputStream in = new BufferedInputStream(new URL(AutoProxy.conf.cert.file).openStream());
@@ -54,7 +54,9 @@ public class HttpServer extends NanoHTTPD {
 							        fileOutputStream.write(dataBuffer, 0, bytesRead);
 							    }
 							} catch (IOException e) {
-							    // handle exception
+							    start();
+								l.info("Started HttpServer (without certificate)!");
+							    return;
 							}
 					makeSecure(NanoHTTPD.makeSSLSocketFactory("cert." + filetype, AutoProxy.conf.cert.password.toCharArray()), null);
 				}
