@@ -55,6 +55,8 @@ public class HttpServer extends NanoHTTPD {
 			if(AutoProxy.conf.cert.enabled) {
 				l.info("Starting WebServer with Certificate at " + AutoProxy.conf.cert.file + (AutoProxy.conf.cert.url ? " (URL)" : ""));
 				if(AutoProxy.conf.cert.url) {
+					AutoProxy.conf.cert.file = AutoProxy.conf.cert.file.replace("http://" , "http:/" ).replace("http:/",  "http://" );
+					AutoProxy.conf.cert.file = AutoProxy.conf.cert.file.replace("https://", "https:/").replace("https:/", "https://");
 					String filetype = AutoProxy.conf.cert.file.substring(AutoProxy.conf.cert.file.lastIndexOf("."));
 					try (BufferedInputStream in = new BufferedInputStream(new URL(AutoProxy.conf.cert.file).openStream());
 							  FileOutputStream fileOutputStream = new FileOutputStream("cert." + filetype)) {
