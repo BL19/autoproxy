@@ -3,6 +3,10 @@ package me.BL19.AutoProxy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,7 +148,12 @@ public class AutoProxy {
 		}
 		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
-		new HttpServer();
+		try {
+			new HttpServer();
+		} catch (UnrecoverableKeyException | NoSuchAlgorithmException | CertificateException | KeyStoreException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		tempRemover.start();
 	}
 
@@ -159,7 +168,7 @@ public class AutoProxy {
 		String r = new String(data, "UTF-8");
 
 		// Try to eliminate user errors
-		r = r.toLowerCase();
+//		r = r.toLowerCase();
 		r = r.replace("hardreplace", "hardReplace");
 		r = r.replace("replaceinheaders", "replaceInHeaders");
 		r = r.replace("filetypestoignore", "fileTypesToIgnore");

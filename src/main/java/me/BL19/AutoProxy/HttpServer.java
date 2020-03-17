@@ -17,10 +17,18 @@ import java.net.URLConnection;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+
+import javax.net.ssl.KeyManagerFactory;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
@@ -28,6 +36,8 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+
+import com.google.gson.Gson;
 
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
@@ -37,7 +47,7 @@ public class HttpServer extends NanoHTTPD {
 
 	public Logger l = new Logger(HttpServer.class);
 
-	public HttpServer() {
+	public HttpServer() throws NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableKeyException {
 		super(AutoProxy.conf.port);
 		
 		l.info("Trying to start http server on port " + AutoProxy.conf.port);
@@ -58,11 +68,25 @@ public class HttpServer extends NanoHTTPD {
 								l.info("Started HttpServer (without certificate)!");
 							    return;
 							}
-					makeSecure(NanoHTTPD.makeSSLSocketFactory("cert." + filetype, AutoProxy.conf.cert.password.toCharArray()), null);
+					KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+			        InputStream keyStoreStream = new FileInputStream(AutoProxy.conf.cert.file);
+			        keyStore.load(keyStoreStream, AutoProxy.conf.cert.password.toCharArray());
+			        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+			        keyManagerFactory.init(keyStore, AutoProxy.conf.cert.password.toCharArray());
+			        
+					makeSecure(NanoHTTPD.makeSSLSocketFactory(keyStore, keyManagerFactory), null);
+				} else {
+					KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+			        InputStream keyStoreStream = new FileInputStream(AutoProxy.conf.cert.file);
+			        keyStore.load(keyStoreStream, AutoProxy.conf.cert.password.toCharArray());
+			        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+			        keyManagerFactory.init(keyStore, AutoProxy.conf.cert.password.toCharArray());
+					makeSecure(NanoHTTPD.makeSSLSocketFactory(keyStore, keyManagerFactory), null);
+					l.info("Loaded certificate");
 				}
-				makeSecure(NanoHTTPD.makeSSLSocketFactory("/" + AutoProxy.conf.cert.file, AutoProxy.conf.cert.password.toCharArray()), null);
-			} else
-				start();
+			}
+			System.out.println("Starting");
+			start();
 		} catch (IOException e) {
 			l.error("Failed to start HttpServer");
 			e.printStackTrace();
@@ -99,6 +123,7 @@ public class HttpServer extends NanoHTTPD {
 
 	@Override
 	public Response serve(IHTTPSession session) {
+		System.out.println("Request");
 		if (session.getMethod() == Method.OPTIONS) {
 			Response r = newFixedLengthResponse(Status.OK, "text", "OK");
 			r.addHeader("Access-Control-Allow-Origin", "*");
@@ -107,12 +132,14 @@ public class HttpServer extends NanoHTTPD {
 			r.addHeader("Server", "AutoProxy");
 			return r;
 		}
+		
 		try {
 			String uri = session.getUri();
 			while (uri.startsWith("/")) {
 				uri = uri.substring(1);
 			}
 			uri = "/" + uri;
+			System.out.println(uri);
 			if (uri.equals("/config") && AutoProxy.key != null) {
 				if (!session.getHeaders().containsKey("apkey")
 						|| !session.getHeaders().get("apkey").equals(AutoProxy.key)) { // Wrong key
@@ -157,6 +184,15 @@ public class HttpServer extends NanoHTTPD {
 				} else if (session.getMethod() == Method.GET) {
 					Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
 					return newFixedLengthResponse(yml.dump(AutoProxy.conf));
+				}
+			} else if(uri.startsWith("/apcert/")) {
+				String key = uri.substring("/apcert/".length());
+				key = key.substring(0, key.indexOf("/"));
+				if(key.equals(AutoProxy.conf.cert.postKey)) {
+					String file = uri.substring("/apcert/".length() + key.length() + 1);
+					if(file.equals(AutoProxy.conf.cert.file)) {
+						return getResponseFromFile(file);
+					}
 				}
 			}
 

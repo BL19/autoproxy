@@ -6,5 +6,6 @@ public class CertConfig {
 	public boolean url;
 	public String file;
 	public String password;
+	public String postKey;
 	
 }
