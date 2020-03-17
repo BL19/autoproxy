@@ -71,7 +71,7 @@ public class HttpServer extends NanoHTTPD {
 							    return;
 							}
 					KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-			        InputStream keyStoreStream = new FileInputStream(AutoProxy.conf.cert.file);
+			        InputStream keyStoreStream = new FileInputStream("cert." + filetype);
 			        keyStore.load(keyStoreStream, AutoProxy.conf.cert.password.toCharArray());
 			        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 			        keyManagerFactory.init(keyStore, AutoProxy.conf.cert.password.toCharArray());
