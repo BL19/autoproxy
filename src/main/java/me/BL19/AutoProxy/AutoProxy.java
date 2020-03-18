@@ -99,7 +99,7 @@ public class AutoProxy {
 			conf.allowReplace = true;
 			
 			conf.cert = new CertConfig();
-			if(System.getenv("apcert").equals("true")) {
+			if(System.getenv("apcert") != null && System.getenv("apcert").equals("true")) {
 				conf.cert.enabled = true;
 				if(System.getenv("apcert.pwd") != null) {
 					conf.cert.password = System.getenv("apcert.pwd");
