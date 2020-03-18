@@ -280,6 +280,7 @@ public class HttpServer extends NanoHTTPD {
 					String host = getHost(session.getHeaders().get("host"));
 					String replacement = addr.url;
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
+					System.out.println("To Server: ");
 					for (String key : session.getHeaders().keySet()) {
 						if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer")
 								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length")
@@ -296,7 +297,7 @@ public class HttpServer extends NanoHTTPD {
 							con.setRequestProperty(key, agent);
 
 						con.setRequestProperty(key, field);
-//				System.out.println(key + ": " + session.getHeaders().get(key));
+						System.out.println("\t" + key + ": " + session.getHeaders().get(key));
 					}
 				}
 				if (session.getHeaders().get("referer") != null)
@@ -524,6 +525,7 @@ public class HttpServer extends NanoHTTPD {
 				String host = getHost(addr.url);
 				String replacement = "http://" + session.getHeaders().get("host") + addr.suburl;
 				String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
+				System.out.println("From Server: ");
 				for (String k : con.getHeaderFields().keySet()) {
 					if (k != null)
 						k = k.toLowerCase();
@@ -537,14 +539,16 @@ public class HttpServer extends NanoHTTPD {
 								res.addHeader(key, null);
 								continue;
 							}
+							System.out.println();
 							String field = String.join(";", con.getHeaderFields().get(k));
 
+							System.out.print("\t" + key + ": " + field + " -> ");
 							if (addr.replaceInHeaders && runActions)
 								field = field.replaceAll(regx, replacement);
 
 							// if (runActions)
-							// System.out.println(key + ": " + field);
-
+							System.out.println(field + " - " + new Gson().toJson(con.getHeaderFields().get(k)));
+							
 							res.addHeader(key, field);
 						} catch (Exception ex) {
 
