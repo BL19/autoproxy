@@ -30,6 +30,8 @@ public class AutoProxy {
 	public static AutoProxyConfig conf;
 	public static String key = KeyForgery.generateKey();
 	
+	public static String debugTrace = "none";
+	
 	public static Thread tempRemover = new Thread(new Runnable() {
 		
 		public void run() {
@@ -65,6 +67,10 @@ public class AutoProxy {
 		Option defaultHost = new Option("d", "default", true, "The default host when a config is not found");
 		defaultHost.setRequired(false);
 		options.addOption(defaultHost);
+		
+		Option debug = new Option("deb", "debug", true, "Debug Trace");
+		debug.setRequired(false);
+		options.addOption(debug);
 
 		CommandLine cmd = null;
 
@@ -146,6 +152,12 @@ public class AutoProxy {
 			conf.port = Integer.parseInt(cmd.getOptionValue("port"));
 			l.info("Set port " + conf.port);
 		}
+		
+		if(cmd.hasOption("debug")) {
+			debugTrace = cmd.getOptionValue("debug");
+			l.info("Activated debug for '" + debugTrace + "'");
+		}
+		
 		if (!conf.allowReplace)
 			l.info("Nevermind you can't replace anyway. (Config Disabled)");
 		try {
