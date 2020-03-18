@@ -272,7 +272,8 @@ public class HttpServer extends NanoHTTPD {
 				URL url = new URL(newAddr);
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(session.getMethod().name());
-
+				
+				con.setInstanceFollowRedirects(false);
 				con.setUseCaches(false);
 
 				{
