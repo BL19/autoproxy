@@ -2,6 +2,8 @@ package me.BL19.AutoProxy;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -20,6 +22,8 @@ import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import com.google.gson.Gson;
+
 import me.BL19.API.Log.Logger;
 import me.BL19.API.Log.modules.ConsoleModule;
 
@@ -29,6 +33,7 @@ public class AutoProxy {
 	public static Logger l = new Logger(AutoProxy.class);
 	public static AutoProxyConfig conf;
 	public static String key = KeyForgery.generateKey();
+	public static Statistics stats;
 	
 	public static String debugTrace = "none";
 	
@@ -43,7 +48,7 @@ public class AutoProxy {
 							f.delete();
 						}
 					}
-					
+					saveStatistics();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -85,6 +90,25 @@ public class AutoProxy {
 
 		l.enableMasterModule(new ConsoleModule());
 		l.info("To POST a config to '/config' use the key '" + key + "'");
+		try {
+			loadStatistics();
+			if(stats == null) {
+				stats = new Statistics();
+				stats.init();
+				saveStatistics();
+			}
+		} catch (IOException ex) {
+			if(!new File("stats.json").exists()) {
+				try {
+					new File("stats.json").createNewFile();
+					stats = new Statistics();
+					stats.init();
+					saveStatistics();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 		try {
 			loadConfig();
 		} catch (IOException e) {
@@ -167,6 +191,23 @@ public class AutoProxy {
 			e.printStackTrace();
 		}
 		tempRemover.start();
+	}
+	
+	public static void loadStatistics() throws IOException {
+		File file = new File("stats.json");
+		FileInputStream fis = new FileInputStream(file);
+		byte[] data = new byte[(int) file.length()];
+		fis.read(data);
+		fis.close();
+
+		String r = new String(data, "UTF-8");
+		stats = new Gson().fromJson(r, Statistics.class);
+	}
+	
+	public static void saveStatistics() throws IOException {
+		FileWriter fw = new FileWriter("stats.json");
+		fw.write(new Gson().toJson(stats));
+		fw.close();
 	}
 
 	public static void loadConfig() throws IOException {

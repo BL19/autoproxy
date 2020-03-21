@@ -37,6 +37,8 @@ import org.apache.http.message.BasicNameValuePair;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import com.google.gson.Gson;
+
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import me.BL19.API.Log.Logger;
@@ -122,6 +124,15 @@ public class HttpServer extends NanoHTTPD {
 		return theString.replaceAll(regx, replacement);
 	}
 
+	public void logRequest(ProxyAddress p) {
+		if(!AutoProxy.stats.requestsPerAddress.containsKey(p.suburl)) {
+			Statistic stat = new Statistic();
+			stat.name = "Requests - " + p.suburl;
+			AutoProxy.stats.requestsPerAddress.put(p.suburl, stat);
+		}
+		AutoProxy.stats.requestsPerAddress.get(p.suburl).increase();
+	}
+	
 	@Override
 	public Response serve(IHTTPSession session) {
 		if(D.isDebug("AP.HTTP.REQ.START"))
@@ -197,6 +208,13 @@ public class HttpServer extends NanoHTTPD {
 						return getResponseFromFile(file);
 					}
 				}
+			} else if(uri.startsWith("/.ap")) {
+				// AutoProxy api
+				String url = uri.substring("/.ap".length());
+				if(url.equals("/stats")) {
+					return newFixedLengthResponse(new Gson().toJson(AutoProxy.stats));
+				}
+
 			}
 
 			ProxyAddress addr = AutoProxy.getTarget(uri);
@@ -223,6 +241,8 @@ public class HttpServer extends NanoHTTPD {
 							"Couldn't find proxying for " + uri + "\n" + "Try adding a / before your suburl");
 				}
 			}
+			logRequest(addr);
+			AutoProxy.stats.requests.increase();
 			HttpURLConnection con = null;
 			try {
 				boolean runActions = true;
@@ -511,6 +531,7 @@ public class HttpServer extends NanoHTTPD {
 					str.close();
 					str = new ByteArrayInputStream(b1);
 					len = b1.length;
+					AutoProxy.stats.bytesSent.increase(len);
 					if (contentType == null) {
 						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
 								URLConnection.guessContentTypeFromName(fileName), str, len);
@@ -598,6 +619,7 @@ public class HttpServer extends NanoHTTPD {
 				res.addHeader("Access-Control-Allow-Origin", "*");
 				res.addHeader("Access-Control-Allow-Methods", "*");
 				res.addHeader("Access-Control-Allow-Headers", "*");
+				AutoProxy.stats.bytesSent.increase(theString.getBytes().length);
 
 				return res;
 
@@ -634,6 +656,7 @@ public class HttpServer extends NanoHTTPD {
 		str.close();
 		str = new ByteArrayInputStream(b1);
 		len = b1.length;
+		AutoProxy.stats.bytesSent.increase(len);
 		Response res;
 		res = newFixedLengthResponse(Status.OK, URLConnection.guessContentTypeFromName(file), str, len);
 		res.addHeader("Content-Disposition", "attachment; filename=" + new File(file).getName());
