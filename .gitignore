@@ -25,3 +25,4 @@ hs_err_pid*
 
 *.yml
 webrs.pkcs12
+stats.json
