@@ -37,6 +37,7 @@ public class Statistic {
 			formatted = df.format(temp) + " " + format;
 		} else {
 			formatted = value + "";
+			formattedNumber = value;
 		}
 	}
 	
