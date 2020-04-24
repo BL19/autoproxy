@@ -427,9 +427,14 @@ public class HttpServer extends NanoHTTPD {
 								uriAddon += "/";
 								s = "http://" + session.getHeaders().get("host") + "/" + uriAddon;
 							}
+							// Standardizing
 							while (s.endsWith("/")) {
 								s = s.substring(0, s.length() - 1);
 							}
+							while (s.startsWith("/")) {
+								s = s.substring(1);
+							}
+							s = "/" + s;
 							String base = "<base href=\"" + s + "/\"";
 							System.out.println("Orig Base: " + baseTag + ", New Base: " + base);
 							theString = theString.replace(baseTag, base);
