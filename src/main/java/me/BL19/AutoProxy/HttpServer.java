@@ -139,11 +139,7 @@ public class HttpServer extends NanoHTTPD {
 			System.out.println("Request");
 		if (session.getMethod() == Method.OPTIONS) {
 			Response r = newFixedLengthResponse(Status.OK, "text", "OK");
-			r.addHeader("Access-Control-Allow-Origin", "*");
-			r.addHeader("Access-Control-Allow-Methods", "*");
-			r.addHeader("Access-Control-Allow-Headers", "*");
-			r.addHeader("Server", "AutoProxy");
-			return r;
+			return applyHeaders(r);
 		}
 		
 		try {
@@ -168,7 +164,7 @@ public class HttpServer extends NanoHTTPD {
 							l.info("Regenerated key '" + AutoProxy.key + "'");
 						}
 					}).start();
-					return newFixedLengthResponse(Status.UNAUTHORIZED, "text", "Wrong key");
+					return applyHeaders(newFixedLengthResponse(Status.UNAUTHORIZED, "text", "Wrong key"));
 				}
 
 				// Key is correct
@@ -185,19 +181,19 @@ public class HttpServer extends NanoHTTPD {
 						fw.close();
 					} catch (IOException e) {
 						e.printStackTrace();
-						return newFixedLengthResponse("Err: " + e.getMessage());
+						return applyHeaders(newFixedLengthResponse("Err: " + e.getMessage()));
 					}
 					try {
 						AutoProxy.loadConfig();
 					} catch (IOException e) {
 						e.printStackTrace();
-						return newFixedLengthResponse("Err: " + e.getMessage());
+						return applyHeaders(newFixedLengthResponse("Err: " + e.getMessage()));
 					}
 					l.warning("Config has been replaced! (" + session.getRemoteIpAddress() + ")");
-					return newFixedLengthResponse(sb.toString());
+					return applyHeaders(newFixedLengthResponse(sb.toString()));
 				} else if (session.getMethod() == Method.GET) {
 					Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
-					return newFixedLengthResponse(yml.dump(AutoProxy.conf));
+					return applyHeaders(newFixedLengthResponse(yml.dump(AutoProxy.conf)));
 				}
 			} else if(uri.startsWith("/apcert/")) {
 				String key = uri.substring("/apcert/".length());
@@ -212,7 +208,9 @@ public class HttpServer extends NanoHTTPD {
 				// AutoProxy api
 				String url = uri.substring("/.ap".length());
 				if(url.equals("/stats")) {
-					return newFixedLengthResponse(new Gson().toJson(AutoProxy.stats));
+					Response r = newFixedLengthResponse(Status.OK, "application/json", new Gson().toJson(AutoProxy.stats));
+					applyHeaders(r);
+					return r;
 				}
 
 			}
@@ -486,7 +484,7 @@ public class HttpServer extends NanoHTTPD {
 //			theString = GZIPCompression.decompress(theString.getBytes());
 
 				if (theString.toLowerCase().startsWith("ap-file") || con.getHeaderField("ap-file") != null) {
-					return getResponseFromFile(con.getHeaderField("ap-file"));
+					return applyHeaders(getResponseFromFile(con.getHeaderField("ap-file")));
 				}
 
 				Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
@@ -621,20 +619,32 @@ public class HttpServer extends NanoHTTPD {
 				res.addHeader("Access-Control-Allow-Headers", "*");
 				AutoProxy.stats.bytesSent.increase(theString.getBytes().length);
 
-				return res;
+				return applyHeaders(res);
 
 			} catch (Exception e) {
 				l.error(e, null);
 				e.printStackTrace();
-				return newFixedLengthResponse(Status.OK, "text", "Welp. Gotta fix that " + e.getClass().getSimpleName() + ". :(");
+				return applyHeaders(newFixedLengthResponse(Status.OK, "text", "Welp. Gotta fix that " + e.getClass().getSimpleName() + ". :("));
 			}
 		} catch (Exception ex) {
 			l.error(ex, null);
 			ex.printStackTrace();
-			return newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P");
+			return applyHeaders(newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P"));
 		}
 	}
 	
+	
+	
+	private Response applyHeaders(Response r) {
+		r.addHeader("Access-Control-Allow-Origin", "*");
+		r.addHeader("Access-Control-Allow-Methods", "*");
+		r.addHeader("Access-Control-Allow-Headers", "*");
+		r.addHeader("X-Content-Type-Options", "*");
+		r.addHeader("Server", "AutoProxy");
+		r.addHeader("X-Server", "AutoProxy");
+		return r;
+	}
+
 	private String fixUrl(String string) {
 		string = string.replace("//", "/");
 		string = string.replace("http:/", "http://");
