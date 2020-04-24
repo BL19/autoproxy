@@ -208,7 +208,7 @@ public class HttpServer extends NanoHTTPD {
 				// AutoProxy api
 				String url = uri.substring("/.ap".length());
 				if(url.equals("/stats")) {
-					l.debug("[STATS]");
+//					l.debug("[STATS]");
 					Response r = newFixedLengthResponse(Status.OK, "application/json", new Gson().toJson(AutoProxy.stats));
 					applyHeaders(r);
 					return r;
