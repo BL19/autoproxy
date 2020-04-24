@@ -208,6 +208,7 @@ public class HttpServer extends NanoHTTPD {
 				// AutoProxy api
 				String url = uri.substring("/.ap".length());
 				if(url.equals("/stats")) {
+					l.debug("[STATS]");
 					Response r = newFixedLengthResponse(Status.OK, "application/json", new Gson().toJson(AutoProxy.stats));
 					applyHeaders(r);
 					return r;
@@ -249,11 +250,14 @@ public class HttpServer extends NanoHTTPD {
 						runActions = false;
 				}
 //				System.out.println1(new Gson().toJson(addr));
-				String address = addr.url + uri.substring(addr.suburl.length(), uri.length());
-				address = address.replace("//", "/").replace(":/", "://");
-				if(address.startsWith("/./")) {
-					address.substring(2);
+				String puri = uri.substring(addr.suburl.length(), uri.length());
+				System.out.println(puri);
+				if(puri.startsWith("-/")) {
+					puri = puri.substring(2);
 				}
+				String address = addr.url + puri;
+				address = address.replace("//", "/").replace(":/", "://");
+				
 				List<NameValuePair> queryParams = URLEncodedUtils.parse(session.getQueryParameterString(),
 						Charset.defaultCharset());
 				List<NameValuePair> newParams = new ArrayList<NameValuePair>();
