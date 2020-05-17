@@ -201,7 +201,7 @@ public class HttpServer extends NanoHTTPD {
 				if(key.equals(AutoProxy.conf.cert.postKey)) {
 					String file = uri.substring("/apcert/".length() + key.length() + 1);
 					if(file.equals(AutoProxy.conf.cert.file)) {
-						return getResponseFromFile(file);
+						return getResponseFromFile(file, null);
 					}
 				}
 			} else if(uri.startsWith("/.ap")) {
@@ -496,7 +496,10 @@ public class HttpServer extends NanoHTTPD {
 //			theString = GZIPCompression.decompress(theString.getBytes());
 
 				if (theString.toLowerCase().startsWith("ap-file") || con.getHeaderField("ap-file") != null) {
-					return applyHeaders(getResponseFromFile(con.getHeaderField("ap-file")));
+					if(con.getHeaderField("ap-file-name") != null) {
+						return applyHeaders(getResponseFromFile(con.getHeaderField("ap-file"), con.getHeaderField("ap-file-name")));
+					}
+					return applyHeaders(getResponseFromFile(con.getHeaderField("ap-file"), null));
 				}
 
 				Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
@@ -671,7 +674,7 @@ public class HttpServer extends NanoHTTPD {
 		httpenc.put("%2F", "/");
 	}
 
-	public Response getResponseFromFileThrows(String file) throws IOException {
+	public Response getResponseFromFileThrows(String file, String resname) throws IOException {
 		InputStream str = new FileInputStream(file);
 		long len = str.available();
 		byte[] b1 = IOUtils.toByteArray(str);
@@ -681,13 +684,17 @@ public class HttpServer extends NanoHTTPD {
 		AutoProxy.stats.bytesSent.increase(len);
 		Response res;
 		res = newFixedLengthResponse(Status.OK, URLConnection.guessContentTypeFromName(file), str, len);
-		res.addHeader("Content-Disposition", "attachment; filename=" + new File(file).getName());
+		if(resname != null) {
+			res.addHeader("Content-Disposition", "attachment; filename=" + resname);
+		} else {
+			res.addHeader("Content-Disposition", "attachment; filename=" + new File(file).getName());
+		}
 		return res;
 	}
 
-	public Response getResponseFromFile(String file) {
+	public Response getResponseFromFile(String file, String resname) {
 		try {
-			return getResponseFromFileThrows(file);
+			return getResponseFromFileThrows(file, resname);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return newFixedLengthResponse(Status.NOT_FOUND, "text", e.getMessage());
