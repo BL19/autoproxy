@@ -251,7 +251,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 //				System.out.println1(new Gson().toJson(addr));
 				String puri = uri.substring(addr.suburl.length(), uri.length());
-				System.out.println(puri);
+//				System.out.println(puri);
 				if(puri.startsWith("-/")) {
 					puri = puri.substring(2);
 				}
