@@ -613,10 +613,15 @@ public class HttpServer extends NanoHTTPD {
 									
 									
 									
+									
 									field = fenc[0] + "?" + f;
 								}
 								if(field.startsWith("http"))
 									field = fixUrl(field);
+								
+								if(field.startsWith("/")) {
+									field = addr.suburl + field;
+								}
 							}
 
 							if(D.isDebug("AP.HTTP.HEADERS.OUT") && addr.replaceInHeaders)
