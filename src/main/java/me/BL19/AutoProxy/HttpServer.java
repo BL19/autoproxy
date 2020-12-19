@@ -34,19 +34,25 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
+import org.nanohttpd.protocols.http.IHTTPSession;
+import org.nanohttpd.protocols.http.NanoHTTPD;
+import org.nanohttpd.protocols.http.content.Cookie;
+import org.nanohttpd.protocols.http.request.Method;
+import org.nanohttpd.protocols.http.response.Response;
+import org.nanohttpd.protocols.http.response.Status;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import com.google.gson.Gson;
 
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
 import me.BL19.API.Log.Logger;
 import me.BL19.AutoProxy.Utils.ArrayUtils;
 
 public class HttpServer extends NanoHTTPD {
 
 	public Logger l = new Logger(HttpServer.class);
+	
+	public static HashMap<String, ProxyAddress> lastAddress = new HashMap<String, ProxyAddress>();
 
 	public HttpServer() throws NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableKeyException {
 		super(AutoProxy.conf.port);
@@ -138,7 +144,7 @@ public class HttpServer extends NanoHTTPD {
 		if(D.isDebug("AP.HTTP.REQ.START"))
 			System.out.println("Request");
 		if (session.getMethod() == Method.OPTIONS) {
-			Response r = newFixedLengthResponse(Status.OK, "text", "OK");
+			Response r = Response.newFixedLengthResponse(Status.OK, "text", "OK");
 			return applyHeaders(r);
 		}
 		
@@ -164,7 +170,7 @@ public class HttpServer extends NanoHTTPD {
 							l.info("Regenerated key '" + AutoProxy.key + "'");
 						}
 					}).start();
-					return applyHeaders(newFixedLengthResponse(Status.UNAUTHORIZED, "text", "Wrong key"));
+					return applyHeaders(Response.newFixedLengthResponse(Status.UNAUTHORIZED, "text", "Wrong key"));
 				}
 
 				// Key is correct
@@ -181,19 +187,19 @@ public class HttpServer extends NanoHTTPD {
 						fw.close();
 					} catch (IOException e) {
 						e.printStackTrace();
-						return applyHeaders(newFixedLengthResponse("Err: " + e.getMessage()));
+						return applyHeaders(Response.newFixedLengthResponse("Err: " + e.getMessage()));
 					}
 					try {
 						AutoProxy.loadConfig();
 					} catch (IOException e) {
 						e.printStackTrace();
-						return applyHeaders(newFixedLengthResponse("Err: " + e.getMessage()));
+						return applyHeaders(Response.newFixedLengthResponse("Err: " + e.getMessage()));
 					}
 					l.warning("Config has been replaced! (" + session.getRemoteIpAddress() + ")");
-					return applyHeaders(newFixedLengthResponse(sb.toString()));
+					return applyHeaders(Response.newFixedLengthResponse(sb.toString()));
 				} else if (session.getMethod() == Method.GET) {
 					Yaml yml = new Yaml(new Constructor(AutoProxyConfig.class));
-					return applyHeaders(newFixedLengthResponse(yml.dump(AutoProxy.conf)));
+					return applyHeaders(Response.newFixedLengthResponse(yml.dump(AutoProxy.conf)));
 				}
 			} else if(uri.startsWith("/apcert/")) {
 				String key = uri.substring("/apcert/".length());
@@ -209,19 +215,19 @@ public class HttpServer extends NanoHTTPD {
 				String url = uri.substring("/.ap".length());
 				if(url.equals("/stats")) {
 //					l.debug("[STATS]");
-					Response r = newFixedLengthResponse(Status.OK, "application/json", new Gson().toJson(AutoProxy.stats));
+					Response r = Response.newFixedLengthResponse(Status.OK, "application/json", new Gson().toJson(AutoProxy.stats));
 					applyHeaders(r);
 					return r;
 				}
 
 			}
+			String apSessionId = session.getCookies().read("AP-Session");
 
 			ProxyAddress addr = AutoProxy.getTarget(uri);
 			String ref = session.getHeaders().get("referer");
 			if (addr == null) {
-
 				if (ref != null) {
-
+					
 					String host = getHost(ref);
 					String regx = "(https|http):(\\/\\/)(((www?)(\\.?))?)(" + host.replace(".", "\\.") + ")";
 					ref = ref.replaceAll(regx, "");
@@ -231,15 +237,30 @@ public class HttpServer extends NanoHTTPD {
 					if (referer != null) {
 						addr = referer;
 						uri = referer.suburl + (uri.startsWith("/") ? "" : "/") + uri;
-					} else {
-						return newFixedLengthResponse(Status.NOT_FOUND, "text",
-								"Couldn't find proxying for " + uri + "\n" + "Try adding a / before your suburl");
 					}
-				} else {
-					return newFixedLengthResponse(Status.NOT_FOUND, "text",
+				} 
+				if(addr == null) {
+					ProxyAddress last = apSessionId == null ? null : lastAddress.get(apSessionId);
+					if(last != null) {
+						addr = last;
+						uri = addr.suburl + (uri.startsWith("/") ? "" : "/") + uri;
+					}
+				}
+				if(addr == null) {
+					return Response.newFixedLengthResponse(Status.NOT_FOUND, "text",
 							"Couldn't find proxying for " + uri + "\n" + "Try adding a / before your suburl");
 				}
 			}
+			
+			if(apSessionId == null) {
+				apSessionId = SessionIDGenerator.getNewSession();
+			}
+			
+			if(lastAddress.containsKey(apSessionId)) {
+				lastAddress.remove(apSessionId);
+			}
+			lastAddress.put(apSessionId, addr);
+			
 			logRequest(addr);
 			AutoProxy.stats.requests.increase();
 			HttpURLConnection con = null;
@@ -359,7 +380,7 @@ public class HttpServer extends NanoHTTPD {
 				}
 
 				if (con.getResponseCode() == 404)
-					return newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found (404) from server");
+					return Response.newFixedLengthResponse(Status.NOT_FOUND, "text", "Not found (404) from server");
 				StringWriter writer = new StringWriter();
 
 				InputStream is = null;
@@ -387,7 +408,7 @@ public class HttpServer extends NanoHTTPD {
 						writer.append(GZIPCompression.decompress(IOUtils.toByteArray(is)));
 					}
 				} catch (IOException ex) {
-					return newFixedLengthResponse(Status.lookup(con.getResponseCode()), "text",
+					return Response.newFixedLengthResponse(Status.lookup(con.getResponseCode()), "text",
 							"Error! Server returned " + con.getResponseCode() + " ("
 									+ Status.lookup(con.getResponseCode()).name() + ")\nMethod: "
 									+ con.getRequestMethod() + "\nRequest Headers: " + getHeaders(requestProperties)
@@ -402,10 +423,10 @@ public class HttpServer extends NanoHTTPD {
 							// Has base tag needs removal
 							int b = theString.indexOf("<base");
 							String s = theString.substring(b);
-							if (s.indexOf("/>") != -1)
-								s = s.substring(0, s.indexOf("/>")); // <base href="*" / <base href="*"><base
-							else
+							if (s.indexOf(">") != -1)
 								s = s.substring(0, s.indexOf(">"));
+							else
+								s = s.substring(0, s.indexOf("/>")); // <base href="*" / <base href="*"><base
 							String baseTag = s + "";
 							s = s.substring(s.indexOf("href=\""));
 							s = s.replace("\"", "");
@@ -416,7 +437,8 @@ public class HttpServer extends NanoHTTPD {
 							}
 							if (s.startsWith("http")) {
 								String uriBase = s.substring(s.indexOf('/') + 2);
-								if (uriBase.contains("/"))
+								boolean containsAtFirst = uriBase.contains("/");
+								if (uriBase.contains("/") || (!containsAtFirst && uriBase.contains(">")))
 									uriBase = uriBase.substring(uriBase.indexOf('/') + 1);
 								else
 									uriBase = "";
@@ -502,7 +524,7 @@ public class HttpServer extends NanoHTTPD {
 					return applyHeaders(getResponseFromFile(con.getHeaderField("ap-file"), null));
 				}
 
-				Response res = newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
+				Response res = Response.newFixedLengthResponse(Status.lookup(code), con.getHeaderField("Content-Type"),
 						theString);
 
 				String content = con.getHeaderField("Content-Type");
@@ -546,10 +568,10 @@ public class HttpServer extends NanoHTTPD {
 					len = b1.length;
 					AutoProxy.stats.bytesSent.increase(len);
 					if (contentType == null) {
-						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()),
+						res = Response.newFixedLengthResponse(Status.lookup(con.getResponseCode()),
 								URLConnection.guessContentTypeFromName(fileName), str, len);
 					} else {
-						res = newFixedLengthResponse(Status.lookup(con.getResponseCode()), contentType, str, len);
+						res = Response.newFixedLengthResponse(Status.lookup(con.getResponseCode()), contentType, str, len);
 					}
 					res.addHeader("Content-Disposition", "attachment; filename=" + fileName);
 					res.setRequestMethod(session.getMethod());
@@ -557,7 +579,7 @@ public class HttpServer extends NanoHTTPD {
 //			if(session.getHeaders().get("accept-encoding") != null && session.getHeaders().get("accept-encoding").contains("gzip")) {
 //				res.setGzipEncoding(true);
 //			}
-				res.setGzipEncoding(false);
+//				res.setGzipEncoding(false);
 				String host = getHost(addr.url);
 				String replacement = fixUrl("http://" + session.getHeaders().get("host") + addr.suburl);
 				
@@ -582,6 +604,18 @@ public class HttpServer extends NanoHTTPD {
 								continue;
 							}
 							String field = con.getHeaderField(k);
+							System.out.println(key);
+							if(key.equalsIgnoreCase("set-cookie")) {
+								String[] cookieArgs = field.split(";");
+								String[] name = cookieArgs[0].split("=");
+								String expires = null;
+								for (String cookie : cookieArgs) {
+									if(cookie.startsWith("expires="))
+										expires = cookie.substring("expires=".length());
+								}
+								System.out.println("Setting cookie: " + field);
+								session.getCookies().set(new Cookie(name[0], name[1], expires));
+							}
 
 							if(D.isDebug("AP.HTTP.HEADERS.OUT")) {
 								System.out.print("\t" + key + ": " + field + (addr.replaceInHeaders ? " -> " : ""));
@@ -637,19 +671,21 @@ public class HttpServer extends NanoHTTPD {
 				res.addHeader("Access-Control-Allow-Origin", "*");
 				res.addHeader("Access-Control-Allow-Methods", "*");
 				res.addHeader("Access-Control-Allow-Headers", "*");
+				session.getCookies().set(new Cookie("AP-Session", apSessionId + "; path=/; expires=Sat, 19 Dec 2020 17:11:15 GMT; httponly", 1));
 				AutoProxy.stats.bytesSent.increase(theString.getBytes().length);
-
+				session.getCookies().unloadQueue(res);
 				return applyHeaders(res);
 
 			} catch (Exception e) {
 				l.error(e, null);
 				e.printStackTrace();
-				return applyHeaders(newFixedLengthResponse(Status.OK, "text", "Welp. Gotta fix that " + e.getClass().getSimpleName() + ". :("));
+				return applyHeaders(Response.newFixedLengthResponse(Status.OK, "text", "Welp. Gotta fix that " + e.getClass().getSimpleName() + ". :("));
 			}
 		} catch (Exception ex) {
 			l.error(ex, null);
 			ex.printStackTrace();
-			return applyHeaders(newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P"));
+			
+			return applyHeaders(Response.newFixedLengthResponse(Status.INTERNAL_ERROR, "text", "It ain't my fault! :P"));
 		}
 	}
 	
@@ -688,7 +724,7 @@ public class HttpServer extends NanoHTTPD {
 		len = b1.length;
 		AutoProxy.stats.bytesSent.increase(len);
 		Response res;
-		res = newFixedLengthResponse(Status.OK, URLConnection.guessContentTypeFromName(file), str, len);
+		res = Response.newFixedLengthResponse(Status.OK, URLConnection.guessContentTypeFromName(file), str, len);
 		if(resname != null) {
 			res.addHeader("Content-Disposition", "attachment; filename=" + resname);
 		} else {
@@ -702,7 +738,7 @@ public class HttpServer extends NanoHTTPD {
 			return getResponseFromFileThrows(file, resname);
 		} catch (IOException e) {
 			e.printStackTrace();
-			return newFixedLengthResponse(Status.NOT_FOUND, "text", e.getMessage());
+			return Response.newFixedLengthResponse(Status.NOT_FOUND, "text", e.getMessage());
 		}
 	}
 
