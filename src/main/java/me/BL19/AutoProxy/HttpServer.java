@@ -329,6 +329,13 @@ public class HttpServer extends NanoHTTPD {
 					String regx = "(https|http):(\\/\\/)(www?)(\\.?)(" + host.replace(".", "\\.") + ")";
 					if(D.isDebug("AP.HTTP.HEADERS.IN"))
 						System.out.println("To Server: ");
+					String cookieString = "";
+					for (String cookie : session.getCookies()) {
+						if(!cookie.toLowerCase().startsWith("ap-"))
+							cookieString += cookie + "=" + session.getCookies().read(cookie) + "; ";
+					}
+					if(cookieString.length() != 0)
+						cookieString = cookieString.substring(0, cookieString.length() - 2);
 					for (String key : session.getHeaders().keySet()) {
 						if (key.equalsIgnoreCase("host") || key.equalsIgnoreCase("referer")
 								|| key.equalsIgnoreCase("Origin") || key.equalsIgnoreCase("content-length")
@@ -342,11 +349,15 @@ public class HttpServer extends NanoHTTPD {
 							field = field.replaceAll(regx, replacement);
 
 						if (key.equalsIgnoreCase("user-agent"))
-							con.setRequestProperty(key, agent);
+							field = agent;
+						
+						if(key.equalsIgnoreCase("cookie"))
+							field = cookieString;
+						
 
 						con.setRequestProperty(key, field);
 						if(D.isDebug("AP.HTTP.HEADERS.IN"))
-							System.out.println("\t" + key + ": " + session.getHeaders().get(key));
+							System.out.println("\t" + key + ": " + field);
 					}
 				}
 				if (session.getHeaders().get("referer") != null)
@@ -391,12 +402,17 @@ public class HttpServer extends NanoHTTPD {
 					if (enc == null || !enc.startsWith("gzip")) {
 //					System.out.println("Encoding: " + enc + " (using none)");
 						if (con.getHeaderField("Content-Length") != null) {
-							BufferedReader in = new BufferedReader(new InputStreamReader(is));
+							InputStreamReader r = new InputStreamReader(is);
+							BufferedReader in = new BufferedReader(r);
 
 							String inputLine;
 
+							String textEncoding = r.getEncoding();
+							
 							while ((inputLine = in.readLine()) != null) {
-								writer.append(inputLine + "\n");
+								byte[] bytes = inputLine.getBytes(textEncoding);
+								String utf8String = new String(bytes, "UTF-8");
+								writer.append(utf8String + "\n");
 							}
 							in.close();
 						} else {
