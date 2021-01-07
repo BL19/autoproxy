@@ -650,7 +650,8 @@ public class HttpServer extends NanoHTTPD {
 									String f = String.join("?", ArrayUtils.remove(fenc, 1));
 									if(f.contains("http")) {
 										String fix = f.substring(f.substring(f.indexOf("?") == -1 ? 0 : f.indexOf("?")).indexOf("http"));
-										fix = fix.substring(0, fix.indexOf("&"));
+										if(fix.contains("&"))
+											fix = fix.substring(0, fix.indexOf("&"));
 										String start = fix + "";
 										fix = fixUrl(fix);
 										f = f.replace(start, fix);
@@ -687,7 +688,7 @@ public class HttpServer extends NanoHTTPD {
 				res.addHeader("Access-Control-Allow-Origin", "*");
 				res.addHeader("Access-Control-Allow-Methods", "*");
 				res.addHeader("Access-Control-Allow-Headers", "*");
-				session.getCookies().set(new Cookie("AP-Session", apSessionId + "; path=/; expires=Sat, 19 Dec 2020 17:11:15 GMT; httponly", 1));
+				session.getCookies().set(new Cookie("AP-Session", apSessionId + "; path=/; expires=Sat, 01 Jan 2022 00:00:00 GMT; httponly", 1));
 				AutoProxy.stats.bytesSent.increase(theString.getBytes().length);
 				session.getCookies().unloadQueue(res);
 				return applyHeaders(res);
