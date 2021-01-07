@@ -2,7 +2,6 @@ package me.BL19.AutoProxy;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.KeyStoreException;
@@ -191,6 +190,25 @@ public class AutoProxy {
 			e.printStackTrace();
 		}
 		tempRemover.start();
+		Thread herokuSwitcher = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						Heroku.schedule();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					try {
+						Thread.sleep(30 * 60000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}, "HerokuSwitcher");
+		herokuSwitcher.start();
 	}
 	
 	public static void loadStatistics() throws IOException {
